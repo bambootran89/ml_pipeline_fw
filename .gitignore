@@ -108,3 +108,6 @@ generated/
 
 # Ignore top-level feature repos
 *_repo/
+
+# Ignore feature_repo* directories (e.g. feature_repo_etth1)
+feature_repo*/
