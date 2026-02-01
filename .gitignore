@@ -97,3 +97,7 @@ build/
 # Other
 *.swp
 *.tmp
+
+# Ignore all directories named 'generated'
+generated/
+**/generated/
