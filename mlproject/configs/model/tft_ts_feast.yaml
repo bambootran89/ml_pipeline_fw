@@ -1,0 +1,14 @@
+experiment:
+  name: "multivariate_tft"
+  type: "multivariate"
+  model: "tft"
+  model_type: "dl"
+  hyperparams:
+    input_chunk_length: 24
+    n_features: 9
+    n_targets: 2
+    output_chunk_length: 6
+    n_epochs: 20
+    batch_size: 16
+    hidden_size: 64
+    num_layers: 2

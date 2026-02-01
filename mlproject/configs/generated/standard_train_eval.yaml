@@ -1,0 +1,58 @@
+pipeline:
+  name: standard_train_eval
+  description: 'Training pipeline with profiling: load -> preprocess -> train -> evaluate
+    -> profile -> log'
+  steps:
+  - id: load_data
+    type: data_loader
+    enabled: true
+  - id: init_artifacts
+    type: mlflow_loader
+    enabled: true
+    alias: latest
+    load_map:
+    - step_id: train_model
+      context_key: fitted_train_model
+    - step_id: preprocess
+      context_key: fitted_preprocess
+  - id: preprocess
+    type: preprocessor
+    enabled: true
+    log_artifact: true
+    artifact_type: preprocess
+    depends_on:
+    - init_artifacts
+    - load_data
+    is_train: false
+    alias: latest
+    instance_key: fitted_preprocess
+  - id: train_evaluate
+    type: evaluator
+    enabled: true
+    depends_on:
+    - init_artifacts
+    - preprocess
+    wiring:
+      inputs:
+        features: preprocessed_data
+        model: fitted_train_model
+        targets: target_data
+      outputs:
+        metrics: train_metrics
+  - id: profiling
+    type: profiling
+    enabled: true
+    depends_on:
+    - train_evaluate
+    exclude_keys:
+    - cfg
+    - preprocessor
+    - df
+    - train_df
+    - val_df
+    - test_df
+  - id: log_results
+    type: logger
+    enabled: true
+    depends_on:
+    - train_evaluate

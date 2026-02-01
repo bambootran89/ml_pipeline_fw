@@ -1,0 +1,20 @@
+experiment:
+  name: 'tab_catboost'
+  type: 'regression'
+  model: "catboost"
+  model_type: "ml"
+  hyperparams:
+    input_chunk_length: 24
+    output_chunk_length: 6
+    type: "classification"
+    args:
+      n_estimators: 1000
+      learning_rate: 0.05
+      max_depth: 6
+      loss_function: "Logloss"
+      objective: "Logloss"
+      eval_metric: "AUC"
+      task_type: "CPU"
+      early_stopping_rounds: 20
+      verbose: 100
+      allow_writing_files: False

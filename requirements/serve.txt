@@ -1,0 +1,30 @@
+# Minimal requirements for serving only
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+ray[serve]==2.40.0
+
+# Data handling
+pandas==2.2.3
+numpy<2.0
+pyarrow<18.1.0
+
+# ML models (minimal set)
+scikit-learn==1.6.1
+xgboost==2.1.3
+catboost==1.2.7
+
+# MLflow client (model loading)
+mlflow==2.19.0
+
+# Feature store client
+feast==0.43.0
+
+# Configuration
+omegaconf==2.3.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# HTTP client
+httpx==0.28.1

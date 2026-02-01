@@ -1,0 +1,44 @@
+defaults:
+  - ../base/preprocessing.yaml
+  - ../base/model.yaml
+  - ../base/training.yaml
+  - ../base/evaluation.yaml
+  - ../base/mlflow.yaml
+  - ../base/tuning.yaml
+
+data:
+  path: "mlproject/data/ETTh1.csv"   # optional demo
+  index_col: "date"
+  target_columns: ["HUFL","MUFL",]
+  features: ["HUFL", "MUFL", "mobility_inflow"]
+  return_type: pandas
+  type: timeseries
+
+experiment:
+  name: "catboost_tuning"
+  type: "timeseries"
+  model: "catboost"
+  model_type: "ml"
+  hyperparams:
+    # Initial guess (will be overridden by tuning)
+    input_chunk_length: 24
+    output_chunk_length: 6
+    n_targets: 2
+    args:
+      iterations: 1000
+      learning_rate: 0.05
+      depth: 6
+      loss_function: "MultiRMSE"
+      task_type: "CPU"
+      early_stopping_rounds: 20
+      verbose: 100
+      allow_writing_files: False
+
+# Override tuning settings
+tuning:
+  n_trials: 30
+  n_splits: 3
+  test_size: 24
+  optimize_metric: "mae_mean"
+  direction: "minimize"
+  n_jobs: 1

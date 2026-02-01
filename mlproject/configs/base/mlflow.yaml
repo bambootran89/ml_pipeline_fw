@@ -1,0 +1,25 @@
+mlflow:
+  tracking_uri: "mlruns"  # hoặc remote server
+  experiment_name: "timeseries_forecasting"
+  run_name_prefix: "exp"
+  enabled: true
+
+  # Model registry
+  registry:
+    enabled: true
+    model_name: "ts_forecast_model"
+
+  # Artifacts to log
+  artifacts:
+    log_model: true
+    log_scaler: true
+    log_config: true
+    log_metrics: true
+    log_plots: false
+
+  # Auto-logging
+  autolog:
+    enabled: true
+    log_models: true
+    log_input_examples: true
+    log_model_signatures: true

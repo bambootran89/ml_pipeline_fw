@@ -1,0 +1,87 @@
+name: ml template
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.11]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Check line count
+        run: |
+          echo "Checking lines of code in each file"
+          MAX_LINES=1000
+          for file in $(git ls-files | grep -v '^tests/'); do
+            if [[ "$file" != *".pylintrc"* ]] && [[ "$file" != *"airflow.cfg"* ]]; then
+              line_count=$(wc -l < "$file")
+              if [ "$line_count" -gt "$MAX_LINES" ]; then
+                echo "::error file=$file::File $file has $line_count lines, which exceeds the threshold of $MAX_LINES lines."
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Check lines of code changes
+        run: |
+          MAX_CHANGE_LINES=200
+          git fetch origin main
+          LAST_MAIN_COMMIT=$(git rev-parse origin/main)
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          if [ "$LAST_MAIN_COMMIT" = "$CURRENT_COMMIT" ]; then
+            DIFF_RANGE="HEAD^1..HEAD"
+          else
+            DIFF_RANGE="origin/main..HEAD"
+          fi
+          CHANGES=$(git diff --numstat "$DIFF_RANGE" | awk '{added+=$1; deleted+=$2} END {print added+deleted}')
+          if [ -n "$CHANGES" ] && [ "$CHANGES" -gt "$MAX_CHANGE_LINES" ]; then
+            echo "::error::Too many changes: $CHANGES lines. Maximum allowed: $MAX_CHANGE_LINES lines."
+            exit 1
+          else
+            echo "Number of changed lines: $CHANGES"
+          fi
+
+      - name: Cache python installation
+        id: cache-python
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.pythonLocation }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/prod.txt') }}
+          restore-keys: ${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}
+      - name: Free up space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          df -h
+      - name: Install dependencies
+        if: steps.cache-python.outputs.cache-hit != 'true'
+        run: |
+          # Upgrade pip, setuptools, wheel to latest versions
+          curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python3 get-pip.py --force-reinstall
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install -r requirements/prod.txt --extra-index-url https://download.pytorch.org/whl/cpu
+          python3 -m pip install -e .[dev]
+
+      - name: Make test
+        run: |
+          export PYTHONPATH=$(pwd)
+          python3 -m flake8 ./mlproject/
+          python3 -m mypy ./mlproject/
+          python3 -m pytest -s --durations=0 tests/
+          python3 -m pylint ./mlproject/

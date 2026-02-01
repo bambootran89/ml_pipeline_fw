@@ -1,0 +1,110 @@
+# Multi-stage Dockerfile for TRAINING (In-house use)
+# Includes: Training, Evaluation, Feast, MLflow, All ML libraries
+
+# ============================================================================
+# Stage 1: Builder - Build dependencies
+# ============================================================================
+FROM python:3.11-slim as builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy requirements
+COPY requirements/prod.txt requirements.txt
+
+# Build wheels for faster installation in next stage
+RUN pip wheel --no-cache-dir --wheel-dir /build/wheels -r requirements.txt
+
+# ============================================================================
+# Stage 2: Training Runtime - Full ML environment
+# ============================================================================
+FROM python:3.11-slim as training
+
+LABEL maintainer="ML Pipeline Team"
+LABEL version="1.0.0"
+LABEL description="ML Training Pipeline with Feast and MLflow (In-house)"
+LABEL usage="training,evaluation,tuning,feast-ingestion"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/home/cuong/ml_pipeline_template \
+    MLFLOW_TRACKING_URI=http://mlflow:5000
+
+# Install runtime dependencies including database drivers for Feast
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    libpq-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user
+RUN groupadd -r mluser && useradd -r -g mluser -u 1000 mluser
+
+WORKDIR /home/cuong/ml_pipeline_template
+
+# Copy wheels from builder
+COPY --from=builder /build/wheels /wheels
+
+# Install dependencies
+RUN pip install --no-cache --no-index --find-links=/wheels /wheels/* \
+    && rm -rf /wheels
+
+# Copy application code
+COPY --chown=mluser:mluser . /home/cuong/ml_pipeline_template
+
+# Install package
+RUN pip install --no-cache-dir -e .
+
+# Create necessary directories
+RUN mkdir -p /home/cuong/ml_pipeline_template/mlruns /home/cuong/ml_pipeline_template/artifacts /home/cuong/ml_pipeline_template/logs /home/cuong/ml_pipeline_template/feast_store \
+    && chown -R mluser:mluser /home/cuong/ml_pipeline_template
+
+USER mluser
+
+# Expose ports (not used in training jobs but useful for debugging)
+EXPOSE 8000
+
+# Health check (for debugging/monitoring)
+HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=3 \
+    CMD python -c "import mlproject; print('OK')" || exit 1
+
+# Default: Show help
+CMD ["python", "-m", "mlproject.src.pipeline.dag_run", "--help"]
+
+# ============================================================================
+# Stage 3: Development - Training + Dev tools
+# ============================================================================
+FROM training as training-dev
+
+USER root
+
+# Install development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    vim \
+    nano \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install dev dependencies
+COPY requirements/dev.txt /tmp/dev-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/dev-requirements.txt \
+    && rm /tmp/dev-requirements.txt
+
+USER mluser
+
+CMD ["/bin/bash"]

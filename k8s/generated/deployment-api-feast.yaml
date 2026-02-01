@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-prediction-api-feast
+  labels:
+    app: ml-prediction
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ml-prediction
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ml-prediction
+        version: v1
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      # [FEAST SPECIFIC] Init Container to seed data and fix permissions
+      initContainers:
+      - name: fix-permissions-seed-data
+        image: ml-pipeline-train:latest # Using train image because it has the source data
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-c", "cp -rn /home/cuong/ml_pipeline_template/feature_repo_etth1/data/* /mnt/feast_data/ || true && chown -R 1000:1000 /home/cuong/ml_pipeline_template/mlruns /mnt/feast_data"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "/home/cuong/ml_pipeline_template/mlruns"
+        - name: feast-data-volume
+          mountPath: /mnt/feast_data
+
+      containers:
+      - name: api-container
+        image: ml-pipeline-serve:latest
+        imagePullPolicy: IfNotPresent
+        # Override command to use valid experiment config
+        command: ["/bin/bash", "./mlproject/serve_api.sh"]
+        # [FEAST SPECIFIC] Use 'etth3_feast.yaml' which points to Feature Store
+        args: ["-e", "mlproject/configs/experiments/etth3_feast.yaml", "-a", "latest", "mlproject/configs/generated/standard_train_serve.yaml"]
+
+        ports:
+        - name: http
+          containerPort: 8000
+
+        env:
+        # [MLFLOW] Use MLflow Service
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "/home/cuong/ml_pipeline_template/mlruns"
+        - name: feast-data-volume
+          mountPath: "/home/cuong/ml_pipeline_template/feature_repo_etth1/data"
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+      volumes:
+      - name: mlruns-volume
+        hostPath:
+          path: "/home/cuong/ml_pipeline_template/mlruns"
+          type: DirectoryOrCreate
+      - name: feast-data-volume
+        hostPath:
+          path: "/home/cuong/ml_pipeline_template/feature_repo_etth1/data"
+          type: DirectoryOrCreate

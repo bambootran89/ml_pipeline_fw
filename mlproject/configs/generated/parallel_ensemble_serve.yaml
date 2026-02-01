@@ -1,0 +1,68 @@
+pipeline:
+  name: parallel_ensemble_serve
+  steps:
+  - id: init_artifacts
+    type: mlflow_loader
+    enabled: true
+    alias: latest
+    load_map:
+    - step_id: xgboost_branch
+      context_key: fitted_xgboost_branch
+    - step_id: catboost_branch
+      context_key: fitted_catboost_branch
+    - step_id: kmeans_branch
+      context_key: fitted_kmeans_branch
+    - step_id: preprocess
+      context_key: fitted_preprocess
+  - id: preprocess
+    type: preprocessor
+    enabled: true
+    log_artifact: true
+    artifact_type: preprocess
+    depends_on:
+    - init_artifacts
+    is_train: false
+    alias: latest
+    instance_key: fitted_preprocess
+  - id: xgboost_branch_inference
+    type: feature_inference
+    enabled: true
+    depends_on:
+    - init_artifacts
+    - preprocess
+    source_model_key: fitted_xgboost_branch
+    base_features_key: preprocessed_data
+    output_key: xgboost_branch_predictions
+    apply_windowing: false
+  - id: catboost_branch_inference
+    type: feature_inference
+    enabled: true
+    depends_on:
+    - init_artifacts
+    - xgboost_branch_inference
+    source_model_key: fitted_catboost_branch
+    base_features_key: preprocessed_data
+    output_key: catboost_branch_predictions
+    apply_windowing: false
+  - id: kmeans_branch_inference
+    type: feature_inference
+    enabled: true
+    depends_on:
+    - init_artifacts
+    - catboost_branch_inference
+    source_model_key: fitted_kmeans_branch
+    base_features_key: preprocessed_data
+    output_key: kmeans_branch_predictions
+    apply_windowing: false
+  - id: final_profiling
+    type: profiling
+    enabled: true
+    depends_on:
+    - kmeans_branch_inference
+    exclude_keys:
+    - cfg
+    - preprocessor
+    - df
+    - train_df
+    - val_df
+    - test_df

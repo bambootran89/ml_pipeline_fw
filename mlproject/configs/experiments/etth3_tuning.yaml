@@ -1,0 +1,54 @@
+defaults:
+  - ../base/model.yaml
+  - ../base/training.yaml
+  - ../base/evaluation.yaml
+  - ../base/mlflow.yaml
+  - ../base/tuning.yaml
+  - ../base/data.yaml
+
+data:
+  path: "mlproject/data/ETTh1.csv"   # optional demo
+  index_col: "date"
+  target_columns: ["HUFL","MUFL"]
+  features: ["HUFL", "MUFL", "mobility_inflow"]
+  return_type: pandas
+  type: timeseries
+
+
+preprocessing:
+  steps:
+    - name: fill_missing
+      method: ffill
+    - name: normalize
+      method: zscore
+  split:
+    train: 0.8
+    val: 0.0
+    test: 0.2
+  artifacts_dir: "mlproject/artifacts/preprocessing"
+
+experiment:
+  name: "tune_xgboost_tuning"
+  type: "timeseries"
+  model: "xgboost"
+  model_type: "ml"
+  hyperparams:
+    # Initial guess (will be overridden by tuning)
+    input_chunk_length: 24
+    output_chunk_length: 6
+    n_targets: 2
+    args:
+      n_estimators: 100
+      max_depth: 5
+      learning_rate: 0.1
+      objective: "reg:squarederror"
+      early_stopping_round: 15
+
+# Override tuning settings
+tuning:
+  n_trials: 30
+  n_splits: 3
+  test_size: 24
+  optimize_metric: "mae_mean"
+  direction: "minimize"
+  n_jobs: 1

@@ -1,0 +1,141 @@
+# Fixed nested sub-pipeline with proper feature engineering
+# This config works with the new ConfigGenerator
+
+pipeline:
+  name: "nested_feature_engineering"
+  steps:
+    # Stage 1: Data Loading
+    - id: "load_data"
+      type: "data_loader"
+      enabled: true
+
+    # Stage 2: Preprocessing
+    - id: "preprocess"
+      type: "preprocessor"
+      enabled: true
+      log_artifact: true
+      artifact_type: "preprocess"
+      depends_on: ["load_data"]
+      is_train: true
+      wiring:
+        inputs:
+          df: "df"
+          train_df: "train_df"
+          test_df: "test_df"
+        outputs:
+          features: "preprocessed_data"
+          targets: "target_data"
+
+    # Stage 3: Feature Engineering Sub-Pipeline
+    - id: "cluster_pipeline"
+      type: "sub_pipeline"
+      enabled: true
+      depends_on: ["preprocess"]
+      isolated: false
+
+      # Inline pipeline with feature engineering steps
+      pipeline:
+        steps:
+          # Sub-step 1: Impute NaN values
+          - id: "impute_nan"
+            type: "dynamic_adapter"
+            enabled: true
+            log_artifact: true
+            artifact_type: "preprocess"
+            class_path: "sklearn.impute.SimpleImputer"
+            hyperparams:
+              strategy: "mean"
+            run_method: "fit_transform"
+            wiring:
+              inputs:
+                X: "preprocessed_data"
+              outputs:
+                output: "imputed_data"
+
+          # Sub-step 2: Clustering for features
+          - id: "cluster_type_1"
+            type: "clustering"
+            model_name: "kmean"
+            log_artifact: true
+            artifact_type: "model"
+            depends_on: ["impute_nan"]
+            output_as_feature: true
+            hyperparams:
+              n_clusters: 4
+            wiring:
+              inputs:
+                features: "imputed_data"
+                targets: "target_data"
+              outputs:
+                features: "cluster_1_features"
+                model: "cluster_model_1"
+
+          # Sub-step 3: PCA for dimensionality reduction
+          - id: "pca"
+            type: "dynamic_adapter"
+            enabled: true
+            log_artifact: true
+            artifact_type: "preprocess"
+            depends_on: ["impute_nan"]
+            class_path: "sklearn.decomposition.PCA"
+            hyperparams:
+              n_components: 2
+            run_method: "fit_transform"
+            wiring:
+              inputs:
+                X: "imputed_data"
+              outputs:
+                output: "pca_data"
+
+    # Stage 4: Build DataModule with Composed Features
+    - id: "concat_prepare_data"
+      type: "datamodule"
+      enabled: true
+      depends_on: ["cluster_pipeline"]
+      additional_feature_keys:
+        - cluster_1_features
+        - pca_data
+      wiring:
+        inputs:
+          features: "preprocessed_data"
+          targets: "target_data"
+        outputs:
+          datamodule: "concat_prepare_data_datamodule"
+
+    # Stage 5: Train Model
+    - id: "train_model"
+      type: "trainer"
+      enabled: true
+      depends_on: ["concat_prepare_data"]
+      log_artifact: true
+      artifact_type: "model"
+      wiring:
+        inputs:
+          datamodule: "concat_prepare_data_datamodule"
+        outputs:
+          model: "final_model"
+
+    # Stage 6: Evaluation
+    - id: "evaluate"
+      type: "evaluator"
+      enabled: true
+      depends_on: ["train_model"]
+      wiring:
+        inputs:
+          model: "final_model"
+          datamodule: "concat_prepare_data_datamodule"
+        outputs:
+          metrics: "evaluation_metrics"
+
+    # Stage 7: Profiling
+    - id: "final_profiling"
+      type: "profiling"
+      enabled: true
+      depends_on: ["evaluate"]
+      exclude_keys: ["cfg", "preprocessor", "df", "train_df", "val_df", "test_df"]
+
+    # Stage 8: Logging
+    - id: "log_results"
+      type: "logger"
+      enabled: true
+      depends_on: ["evaluate"]

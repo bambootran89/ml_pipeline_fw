@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-server
+  labels:
+    app: mlflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+      - name: mlflow
+        image: ghcr.io/mlflow/mlflow:v2.9.2
+        ports:
+        - containerPort: 5000
+        command:
+        - mlflow
+        - server
+        - --host
+        - 0.0.0.0
+        - --backend-store-uri
+        - sqlite:////mlruns/mlflow.db
+        - --default-artifact-root
+        - /mlruns
+        volumeMounts:
+        - name: ml-artifacts
+          mountPath: /mlruns
+      volumes:
+      - name: ml-artifacts
+        hostPath:
+          path: "/home/cuong/ml_pipeline_template/mlruns"
+          type: DirectoryOrCreate

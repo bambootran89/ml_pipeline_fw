@@ -1,0 +1,246 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # Shared Infrastructure Services
+  # ============================================================================
+
+  # MLflow tracking server (shared by training and serving)
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.9.2
+    container_name: mlflow-server
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+    networks:
+      - ml-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Feast registry server (optional - for online feature serving)
+  feast-registry:
+    image: feastdev/feature-server:latest
+    container_name: feast-registry
+    ports:
+      - "6566:6566"
+    volumes:
+      - feast-data:/feast
+      - ./mlproject/configs/feast:/feast/feature_repo
+    environment:
+      - FEAST_USAGE=False
+    networks:
+      - ml-network
+    profiles:
+      - feast
+    restart: unless-stopped
+
+  # ============================================================================
+  # Training Services (In-house only)
+  # ============================================================================
+
+  # Training job (on-demand) - Full ML environment
+  train:
+    build:
+      context: .
+      dockerfile: Dockerfile.train
+      target: training
+    container_name: ml-training
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PYTHONUNBUFFERED=1
+      - FEAST_ONLINE_ENABLED=false
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./artifacts:/app/artifacts
+      - ./mlproject/data:/app/mlproject/data
+      - ./feast_store:/app/feast_store
+      - ./logs:/app/logs
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    networks:
+      - ml-network
+    command: >
+      python -m mlproject.src.pipeline.dag_run train
+      -e /app/mlproject/configs/experiments/etth3.yaml
+      -p /app/mlproject/configs/pipelines/standard_train.yaml
+    profiles:
+      - train
+
+  # Evaluation job (on-demand)
+  evaluate:
+    build:
+      context: .
+      dockerfile: Dockerfile.train
+      target: training
+    container_name: ml-evaluation
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./artifacts:/app/artifacts
+      - ./mlproject/data:/app/mlproject/data
+      - ./logs:/app/logs
+    depends_on:
+      - mlflow
+    networks:
+      - ml-network
+    command: >
+      python -m mlproject.src.pipeline.dag_run eval
+      -e /app/mlproject/configs/experiments/etth3.yaml
+      -p /app/mlproject/configs/generated/standard_train_eval.yaml
+      -a latest
+    profiles:
+      - eval
+
+  # Tuning job (on-demand)
+  tune:
+    build:
+      context: .
+      dockerfile: Dockerfile.train
+      target: training
+    container_name: ml-tuning
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./artifacts:/app/artifacts
+      - ./mlproject/data:/app/mlproject/data
+      - ./logs:/app/logs
+    depends_on:
+      - mlflow
+    networks:
+      - ml-network
+    command: >
+      python -m mlproject.src.pipeline.dag_run tune
+      -e /app/mlproject/configs/experiments/etth3.yaml
+      -p /app/mlproject/configs/pipelines/standard_train.yaml
+      --trials 10
+    profiles:
+      - tune
+
+  # Training development environment (interactive)
+  train-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.train
+      target: training-dev
+    container_name: ml-training-dev
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+      - /app/.venv
+      - /app/__pycache__
+    depends_on:
+      - mlflow
+    networks:
+      - ml-network
+    stdin_open: true
+    tty: true
+    profiles:
+      - dev
+    command: /bin/bash
+
+  # ============================================================================
+  # Serving Services (Customer deployment)
+  # ============================================================================
+
+  # Production API (Minimal serving image for customers)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.serve
+      target: serving
+    container_name: ml-serving-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PYTHONUNBUFFERED=1
+      - FEAST_ONLINE_ENABLED=false
+      # For Feast online serving (optional)
+      # - FEAST_ONLINE_ENABLED=true
+      # - FEAST_REGISTRY_URI=feast-registry:6566
+    volumes:
+      # Only logs - no source code or data
+      - ./logs:/app/logs:rw
+      # Optional: Mount Feast config for online serving
+      # - ./mlproject/configs/feast:/app/.feast:ro
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    networks:
+      - ml-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Serving with Feast online store enabled
+  api-feast:
+    build:
+      context: .
+      dockerfile: Dockerfile.serve
+      target: serving
+    container_name: ml-serving-api-feast
+    ports:
+      - "8001:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PYTHONUNBUFFERED=1
+      - FEAST_ONLINE_ENABLED=true
+      - FEAST_REGISTRY_URI=http://feast-registry:6566
+    volumes:
+      - ./logs:/app/logs:rw
+      - ./mlproject/configs/feast:/app/.feast:ro
+    depends_on:
+      - mlflow
+      - feast-registry
+    networks:
+      - ml-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - feast
+    restart: unless-stopped
+
+networks:
+  ml-network:
+    driver: bridge
+
+volumes:
+  mlflow-data:
+    driver: local
+  feast-data:
+    driver: local

@@ -1,0 +1,9 @@
+entity_key_serialization_version: 3
+offline_store:
+  type: file
+online_store:
+  path: data/online.db
+  type: sqlite
+project: mlproject
+provider: local
+registry: data/registry.db

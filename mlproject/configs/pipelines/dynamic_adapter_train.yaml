@@ -1,0 +1,95 @@
+pipeline:
+  name: "dynamic_adapter_kmeans_then_xgboost"
+  steps:
+    - id: "load_data"
+      type: "data_loader"
+      enabled: true
+
+    # Stage 2: Preprocessing
+    - id: "preprocess"
+      type: "preprocessor"
+      log_artifact: true
+      artifact_type: "preprocess"
+      enabled: true
+      depends_on: ["load_data"]
+      is_train: true
+
+    - id: "impute_nan"
+      type: "dynamic_adapter"
+      enabled: true
+      log_artifact: true
+      artifact_type: "preprocess"
+      depends_on: ["preprocess"]
+      class_path: "sklearn.impute.SimpleImputer"
+      hyperparams:
+        strategy: "mean"  # Alternatives: "median", "most_frequent"
+      run_method: "fit_transform"
+      wiring:
+        inputs:
+          X: "preprocessed_data"
+        outputs:
+          output: "imputed_data"
+
+    - id: "kmeans_dynamic"
+      type: "dynamic_adapter"
+      enabled: true
+      log_artifact: true
+      artifact_type: "model"
+      depends_on: ["impute_nan"]
+      class_path: "sklearn.cluster.KMeans"
+      run_method: "fit_predict"
+      hyperparams:
+        n_clusters: 5
+        max_iter: 100
+      wiring:
+        inputs:
+          X: "imputed_data"
+        outputs:
+          labels: "cluster_labels"
+
+    - id: "cluster_profiling"
+      type: "profiling"
+      enabled: true
+      depends_on: ["kmeans_dynamic"]
+      params:
+        include_keys: ["cluster_labels"]
+
+    - id: "prepare_data"
+      type: "datamodule"
+      depends_on: ["preprocess"]
+      wiring:
+        inputs:
+          features: "preprocessed_data"
+          targets: "target_data"
+        outputs: { datamodule: "prepare_data_datamodule" }
+
+    - id: "xgboost_model"
+      type: "trainer"
+      log_artifact: true
+      artifact_type: "model"
+      enabled: true
+      depends_on: ["kmeans_dynamic"]
+      output_as_feature: true
+      wiring:
+        inputs:
+          datamodule: "prepare_data_datamodule"
+        outputs:
+          model: "xgboost_model_model"
+          features: "xgboost_prediction"
+
+
+    - id: "evaluate"
+      type: "evaluator"
+      enabled: true
+      depends_on: ["xgboost_model"]
+      wiring:
+        inputs:
+          model: "xgboost_model_model"
+          datamodule: "prepare_data_datamodule"
+        outputs:
+          metrics: "evaluation_metrics"
+
+    - id: "log_results"
+      type: "logger"
+      enabled: true
+      depends_on: ["evaluate"]

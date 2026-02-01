@@ -1,0 +1,106 @@
+# Cross-validation & Tuning Configuration
+
+tuning:
+  # CV Strategy
+  n_splits: 3
+  test_size: 20
+  train_size: 60  # Only for sliding window
+
+  # Optimization Settings
+  n_trials: 50
+  timeout: null  # seconds (null = no timeout)
+  n_jobs: 1  # parallel jobs (-1 = all CPUs)
+
+  # Target Metric
+  optimize_metric: "mae_mean"  # Must have _mean suffix
+  direction: "minimize"  # "minimize" or "maximize"
+
+  # Optional: Override search space per model
+  # If not specified, uses defaults from SearchSpaceRegistry
+  search_space:
+    xgboost:
+      n_estimators:
+        type: "int"
+        range: [50, 500]
+        step: 10
+      max_depth:
+        type: "int"
+        range: [3, 10]
+        step: 1
+      learning_rate:
+        type: "float"
+        range: [0.001, 0.3]
+        log: true
+      subsample:
+        type: "float"
+        range: [0.5, 1.0]
+        log: false
+      colsample_bytree:
+        type: "float"
+        range: [0.5, 1.0]
+        log: false
+
+    nlinear:
+      hidden:
+        type: "int"
+        range: [64, 512]
+        step: 64
+      lr:
+        type: "float"
+        range: [0.0001, 0.01]
+        log: true
+      n_epochs:
+        type: "int"
+        range: [5, 30]
+        step: 5
+      batch_size:
+        type: "categorical"
+        range: [16, 32, 64]
+
+    tft:
+      hidden_size:
+        type: "int"
+        range: [32, 256]
+        step: 32
+      num_layers:
+        type: "int"
+        range: [1, 3]
+        step: 1
+      lr:
+        type: "float"
+        range: [0.0001, 0.01]
+        log: true
+      n_epochs:
+        type: "int"
+        range: [5, 30]
+        step: 5
+      batch_size:
+        type: "categorical"
+        range: [16, 32, 64]
+    catboost:
+      iterations:
+        type: "int"
+        range: [100, 1000]
+        step: 100
+      learning_rate:
+        type: "float"
+        range: [0.001, 0.1]
+        log: true
+      depth:
+        type: "int"
+        range: [4, 10]
+        step: 1
+      l2_leaf_reg:
+        type: "float"
+        range: [1, 10]
+        log: false
+
+    kmeans:
+      n_clusters:
+        type: "int"
+        range: [2, 10]
+        step: 1
+      max_iter:
+        type: "int"
+        range: [100, 500]
+        step: 50

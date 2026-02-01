@@ -1,0 +1,149 @@
+pipeline:
+  name: nested_suppipeline_tune
+  steps:
+  - id: load_data
+    type: data_loader
+    enabled: true
+  - id: preprocess
+    type: preprocessor
+    enabled: true
+    log_artifact: true
+    artifact_type: preprocess
+    depends_on:
+    - load_data
+    is_train: true
+    wiring:
+      inputs:
+        df: df
+        train_df: train_df
+        test_df: test_df
+      outputs:
+        features: preprocessed_data
+        targets: target_data
+  - id: cluster_pipeline
+    type: sub_pipeline
+    enabled: true
+    depends_on:
+    - preprocess
+    isolated: false
+    pipeline:
+      steps:
+      - id: impute_nan
+        type: dynamic_adapter
+        enabled: true
+        log_artifact: true
+        artifact_type: preprocess
+        class_path: sklearn.impute.SimpleImputer
+        hyperparams:
+          strategy: mean
+        run_method: fit_transform
+        wiring:
+          inputs:
+            X: preprocessed_data
+          outputs:
+            output: imputed_data
+      - id: tune_cluster_type_1
+        type: tuner
+        enabled: true
+        depends_on:
+        - impute_nan
+        target_model_id: cluster_type_1
+      - id: cluster_type_1
+        type: clustering
+        model_name: kmean
+        log_artifact: true
+        artifact_type: model
+        depends_on:
+        - tune_cluster_type_1
+        - impute_nan
+        output_as_feature: true
+        hyperparams:
+          n_clusters: 4
+        wiring:
+          inputs:
+            features: imputed_data
+            targets: target_data
+          outputs:
+            features: cluster_1_features
+            model: cluster_model_1
+        use_tuned_params: true
+        tune_step_id: tune_cluster_type_1
+      - id: pca
+        type: dynamic_adapter
+        enabled: true
+        log_artifact: true
+        artifact_type: preprocess
+        depends_on:
+        - impute_nan
+        class_path: sklearn.decomposition.PCA
+        hyperparams:
+          n_components: 2
+        run_method: fit_transform
+        wiring:
+          inputs:
+            X: imputed_data
+          outputs:
+            output: pca_data
+  - id: concat_prepare_data
+    type: datamodule
+    enabled: true
+    depends_on:
+    - cluster_pipeline
+    additional_feature_keys:
+    - cluster_1_features
+    - pca_data
+    wiring:
+      inputs:
+        features: preprocessed_data
+        targets: target_data
+      outputs:
+        datamodule: concat_prepare_data_datamodule
+  - id: tune_train_model
+    type: tuner
+    enabled: true
+    depends_on:
+    - concat_prepare_data
+    target_model_id: train_model
+  - id: train_model
+    type: trainer
+    enabled: true
+    depends_on:
+    - tune_train_model
+    - concat_prepare_data
+    log_artifact: true
+    artifact_type: model
+    wiring:
+      inputs:
+        datamodule: concat_prepare_data_datamodule
+      outputs:
+        model: final_model
+    use_tuned_params: true
+    tune_step_id: tune_train_model
+  - id: evaluate
+    type: evaluator
+    enabled: true
+    depends_on:
+    - train_model
+    wiring:
+      inputs:
+        model: final_model
+        datamodule: concat_prepare_data_datamodule
+      outputs:
+        metrics: evaluation_metrics
+  - id: final_profiling
+    type: profiling
+    enabled: true
+    depends_on:
+    - evaluate
+    exclude_keys:
+    - cfg
+    - preprocessor
+    - df
+    - train_df
+    - val_df
+    - test_df
+  - id: log_results
+    type: logger
+    enabled: true
+    depends_on:
+    - evaluate

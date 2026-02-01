@@ -1,0 +1,136 @@
+# @package _global_
+# 1. Defaults override
+# Remove default TimeSeries data configuration
+defaults:
+  - override /base/data: null
+  - ../base/model.yaml
+  - ../base/training.yaml
+  - ../base/tuning.yaml
+
+# 2. MLflow tracking & model registry
+mlflow:
+  # tracking_uri: mlruns
+  experiment_name: Tabular_Titanic_Experiment
+  run_name_prefix: xgboost_cls
+  enabled: true
+
+  registry:
+    enabled: true
+    model_name: titanic_xgboost_model
+
+  artifacts:
+    log_model: true
+    log_scaler: true
+    log_config: true
+    log_metrics: true
+    log_plots: true
+
+  autolog:
+    enabled: true
+    log_models: false
+
+# 3. Preprocessing configuration
+preprocessing:
+  steps:
+    - name: fill_missing
+      method: mean  # Options: mean, median, mode, ffill
+      columns:  # Optional, mặc định là tất cả numeric columns
+        - Age
+        - Fare
+    - name: fill_missing
+      method: mode
+      columns:
+        - Sex
+        - Embarked
+        - Pclass
+    # Step 2: Label encoding cho categorical
+    - name: label_encoding
+      columns:
+        - Sex
+        - Embarked
+        - Pclass
+    # Step 3: Scale numerical features
+    - name: normalize
+      method: zscore
+      columns:
+        - Age
+        - Fare
+      save_artifact: true
+
+  # Dataset split ratios (used for non-CV pipelines)
+  split:
+    train: 0.7
+    val: 0.1
+    test: 0.2
+
+  artifacts_dir: mlproject/artifacts/preprocessing
+
+# 4. Data configuration (Tabular)
+data:
+  type: tabular
+  path: mlproject/data/titanic.csv
+
+  # Target column(s) must be a list
+  target_columns:
+    - Survived
+
+  # Selected feature columns
+  features:
+    - "Pclass"  # 1, 2, 3
+    - "Age"     # 22.0, 38.0...
+    - "SibSp"   # 1, 0...
+    - "Parch"   # 0, 1...
+    - "Fare"    # 7.25, 71.83...
+    - "Sex"
+    - "Embarked"
+  # Number of folds for cross-validation
+  n_folds: 5
+
+# 5. Model configuration (XGBoost - Binary Classification)
+model:
+  name: xgboost
+  params:
+    objective: binary:logistic
+    eval_metric: auc
+    n_estimators: 100
+    max_depth: 6
+    learning_rate: 0.05
+
+    # macOS stability setting
+    n_jobs: 1
+
+
+# 6. Evaluation & hyperparameter tuning
+evaluation:
+  type: classification
+  metrics:
+    - accuracy
+    - f1
+    - roc_auc
+    - precision
+    - recall
+
+tuning:
+  n_trials: 30
+  optimize_metric: f1_mean
+  direction: maximize
+  storage: sqlite:///mlflow.db
+
+
+# 7. Experiment metadata
+experiment:
+  name: 'Tabular_Titanic_Experiment'
+  type: 'classification'
+  model: "xgboost"
+  model_type: "ml"
+  hyperparams:
+    input_chunk_length: 24
+    output_chunk_length: 6
+    type: "clasification"
+    args:
+      n_estimators: 100
+      max_depth: 6
+      learning_rate: 0.05
+      objective: "binary:logistic"
+      eval_metric: "auc"
+      early_stopping_rounds: 15

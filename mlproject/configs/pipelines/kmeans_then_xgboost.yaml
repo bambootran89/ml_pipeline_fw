@@ -1,0 +1,91 @@
+pipeline:
+  name: "kmeans_then_xgboost_v2"
+  description: "Two-stage pipeline with clustering profiling"
+
+  steps:
+    # Stage 1: Data Loading
+    - id: "load_data"
+      type: "data_loader"
+      enabled: true
+
+    # Stage 2: Preprocessing
+    - id: "preprocess"
+      type: "preprocessor"
+      enabled: true
+      log_artifact: true
+      artifact_type: "preprocess"
+      depends_on: ["load_data"]
+      is_train: true
+
+    - id: "prepare_data"
+      type: "datamodule"
+      depends_on: ["preprocess"]
+      wiring:
+        inputs:
+          features: "preprocessed_data"
+          targets: "target_data"
+        outputs:
+          datamodule: "prepare_data_datamodule"
+
+    # Stage 3: Clustering for Feature Engineering
+    - id: "kmeans_features"
+      type: "clustering"
+      enabled: true
+      log_artifact: true
+      artifact_type: "model"
+      depends_on: ["prepare_data"]
+      model_name: "kmean"
+      output_as_feature: true
+      hyperparams:
+        n_clusters: 5
+        max_iter: 100
+      wiring:
+        inputs:
+          datamodule: "prepare_data_datamodule"
+        outputs:
+          features: "cluster_labels"
+          model: "kmeans_model"
+
+    # Stage 4: Profile clusters (NEW - early profiling)
+    - id: "cluster_profiling"
+      type: "profiling"
+      enabled: true
+      depends_on: ["kmeans_features"]
+      include_keys: ["cluster_labels", "kmeans_model"]
+
+    # Stage 5: Classification with Cluster Features
+    - id: "xgboost_model"
+      type: "trainer"
+      enabled: true
+      log_artifact: true
+      artifact_type: "model"
+      depends_on: ["prepare_data"]
+      output_as_feature: true
+      wiring:
+        inputs:
+          datamodule: "prepare_data_datamodule"
+
+    # Stage 6: Evaluation
+    - id: "evaluate"
+      type: "evaluator"
+      enabled: true
+      depends_on: ["xgboost_model"]
+      wiring:
+        inputs:
+          datamodule: "prepare_data_datamodule"
+          model: xgboost_model_model
+        outputs:
+          metrics: "evaluation_metrics"
+
+    # Stage 7: Final profiling
+    - id: "final_profiling"
+      type: "profiling"
+      enabled: true
+      depends_on: ["evaluate", "cluster_profiling"]
+      exclude_keys: ["cfg", "preprocessor", "df", "train_df", "val_df"]
+
+    # Stage 8: MLflow Logging
+    - id: "log_results"
+      type: "logger"
+      enabled: true
+      depends_on: ["evaluate", "final_profiling"]

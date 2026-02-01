@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: eval-job-feast-etth1
+  labels:
+    app: ml-training
+    job-type: evaluation
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: ml-training
+        job-type: evaluation
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      initContainers:
+      - name: fix-permissions-seed-data
+        image: ml-pipeline-train:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-c", "cp -rn {{PROJECT_ROOT}}/feature_repo_etth1/data/* /mnt/feast_data/ || true && chown -R 1000:1000 {{PROJECT_ROOT}}/mlruns /mnt/feast_data"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+        - name: feast-data-volume
+          mountPath: /mnt/feast_data
+
+      containers:
+      - name: evaluator
+        image: ml-pipeline-train:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+        - name: feast-data-volume
+          mountPath: "{{PROJECT_ROOT}}/feature_repo_etth1/data"
+        command:
+        - /bin/bash
+        - -c
+        - |
+          cd {{PROJECT_ROOT}}/feature_repo_etth1 && feast apply && cd {{PROJECT_ROOT}} && python -m mlproject.src.pipeline.dag_run train -e {{PROJECT_ROOT}}/mlproject/configs/experiments/etth3_feast.yaml -p {{PROJECT_ROOT}}/mlproject/configs/pipelines/standard_train.yaml
+        env:
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+      volumes:
+      - name: mlruns-volume
+        hostPath:
+          path: "{{PROJECT_ROOT}}/mlruns"
+          type: DirectoryOrCreate
+      - name: feast-data-volume
+        hostPath:
+          path: "{{PROJECT_ROOT}}/feature_repo_etth1/data"
+          type: DirectoryOrCreate

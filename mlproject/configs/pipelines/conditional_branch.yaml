@@ -1,0 +1,92 @@
+# Conditional Model Selection Pipeline
+# Selects model based on data size, using EXTERNAL experiment configs
+#
+# Flow: load_data → preprocess → branch[TFT | XGBoost] → evaluate → log
+#
+# Each branch loads FULL config from separate experiment YAML files.
+# This allows complete customization of model, hyperparams, data settings.
+
+pipeline:
+  name: "conditional_model_selection"
+
+  steps:
+    # Stage 1: Data Loading
+    - id: "load_data"
+      type: "data_loader"
+      enabled: true
+
+    # Stage 2: Preprocessing
+    - id: "preprocess"
+      type: "preprocessor"
+      log_artifact: true
+      artifact_type: "preprocess"
+      enabled: true
+      depends_on: ["load_data"]
+      is_train: true
+
+    - id: "prepare_data"
+      type: "datamodule"
+      depends_on: ["preprocess"]
+      wiring:
+        inputs:
+          features: "preprocessed_data"
+          targets: "target_data"
+        outputs: { datamodule: "prepare_data_datamodule" }
+
+    # Stage 3: Conditional Model Selection
+    - id: "model_selection"
+      type: "branch"
+      enabled: true
+      depends_on: ["prepare_data"]
+      condition:
+        key: "feature_columns_size"
+        operator: "<"
+        value: 4
+
+      # Execute if feature_columns_size < 4 → Load TFT config from external file
+      if_true:
+        id: "train_tft"
+        type: "framework_model"
+        log_artifact: true
+        artifact_type: "model"
+        experiment_config: "mlproject/configs/model/tft_ts.yaml"
+        wiring:
+          inputs:
+            datamodule: "prepare_data_datamodule"
+          outputs:
+            model: "selected_model"
+
+      # Execute if feature_columns_size >= 4 → Load XGBoost config from external file
+      if_false:
+        id: "train_xgb"
+        type: "framework_model"
+        log_artifact: true
+        artifact_type: "model"
+        experiment_config: "mlproject/configs/model/xgboost_ts.yaml"
+        wiring:
+          inputs:
+            datamodule: "prepare_data_datamodule"
+          outputs:
+            model: "selected_model"
+
+    # Stage 4: Evaluation
+    - id: "evaluate"
+      type: "evaluator"
+      enabled: true
+      depends_on: ["model_selection"]
+      wiring:
+        inputs:
+          model: "selected_model"
+          datamodule: "prepare_data_datamodule"
+        outputs:
+          metrics: "evaluation_metrics"
+
+    # Stage 5: Log Results
+    - id: "log_results"
+      type: "logger"
+      enabled: true
+      depends_on: ["evaluate"]
+      wiring:
+        inputs:
+          model: "selected_model"
+          metrics: "evaluation_metrics"

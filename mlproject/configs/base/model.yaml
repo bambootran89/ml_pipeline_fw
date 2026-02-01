@@ -1,0 +1,21 @@
+model_registry:
+  nlinear:
+    module: "mlproject.src.models.nlinear_wrapper"
+    class: "NLinearWrapper"
+    datamodule_type: "dl"
+  tft:
+    module: "mlproject.src.models.tft_wrapper"
+    class: "TFTWrapper"
+    datamodule_type: "dl"
+  xgboost:
+    module: "mlproject.src.models.xgboost_wrapper"
+    class: "XGBWrapper"
+    datamodule_type: "ml"
+  catboost:
+      module: "mlproject.src.models.catboost_wrapper"
+      class: "CatBoostWrapper"
+      datamodule_type: "ml"
+  kmean:
+      module: "mlproject.src.models.kmean_wrapper"
+      class: "KMeansWrapper"
+      datamodule_type: "ml"

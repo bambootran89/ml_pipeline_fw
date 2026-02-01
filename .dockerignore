@@ -1,0 +1,92 @@
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist/
+build/
+*.egg
+
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+mlproject_env/
+py3.10/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Version control
+.git/
+.gitignore
+.github/
+
+# CI/CD
+.gitlab-ci.yml
+.travis.yml
+
+# Testing
+.pytest_cache/
+.coverage
+.tox/
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Logs and temporary files
+*.log
+logs/
+tmplogs/
+*.tmp
+*.temp
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Data (mount as volumes instead)
+# mlproject/data/
+# !mlproject/data/README.md
+
+# Artifacts (mount as volumes)
+artifacts/
+
+# Backup files
+*.bak
+*.old
+*.orig
+Dockerfile.old
+
+# OS
+Thumbs.db
+.Trash-*
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# Node (if any)
+node_modules/
+npm-debug.log
+
+# Kubernetes
+k8s/
+
+# Verification scripts and test outputs
+verify_*.sh
+test_*.sh

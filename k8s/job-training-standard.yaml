@@ -1,0 +1,61 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: training-job-standard-{{EXPERIMENT_NAME}}
+  labels:
+    app: ml-training
+    job-type: training
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: ml-training
+        job-type: training
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      # [STANDARD] Init Container only fixes permissions for MLruns
+      # No Feast data copying required
+      initContainers:
+      - name: fix-permissions
+        image: busybox
+        command: ["sh", "-c", "chown -R 1000:1000 {{PROJECT_ROOT}}/mlruns"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+
+      containers:
+      - name: trainer
+        image: ml-pipeline-train:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # [STANDARD] Simple training
+          cd {{PROJECT_ROOT}} && python -m mlproject.src.pipeline.dag_run train -e {{PROJECT_ROOT}}/mlproject/configs/experiments/{{EXPERIMENT_CONFIG}} -p {{PROJECT_ROOT}}/mlproject/configs/pipelines/{{PIPELINE_CONFIG}}
+
+        env:
+        # [MLFLOW] Connecting to MLflow Service
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+      volumes:
+      - name: mlruns-volume
+        hostPath:
+          path: "{{PROJECT_ROOT}}/mlruns"
+          type: DirectoryOrCreate

@@ -1,0 +1,78 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: training-job-feast-etth1
+  labels:
+    app: ml-training
+    job-type: training
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: ml-training
+        job-type: training
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000  # Run as mluser (uid 1000)
+        runAsGroup: 1000
+        fsGroup: 1000    # Ensure mounted volumes are writable by group 1000
+
+      # [FEAST SPECIFIC] Init Container to seed data
+      # Why: The host volume is initially empty. The image contains 'features.parquet'.
+      # We copy data from image -> shared volume so the main container can access it via the mount.
+      initContainers:
+      - name: fix-permissions-seed-data
+        image: ml-pipeline-train:latest
+        imagePullPolicy: IfNotPresent
+        # Command: Copy data from image location to shared mount, then fix ownership
+        command: ["/bin/bash", "-c", "cp -rn /home/cuong/ml_pipeline_template/feature_repo_etth1/data/* /mnt/feast_data/ || true && chown -R 1000:1000 /home/cuong/ml_pipeline_template/mlruns /mnt/feast_data"]
+        securityContext:
+          runAsUser: 0   # Run as root to allow chown
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "/home/cuong/ml_pipeline_template/mlruns"
+        - name: feast-data-volume
+          mountPath: /mnt/feast_data
+
+      containers:
+      - name: trainer
+        image: ml-pipeline-train:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        # [PERSISTENCE] MLflow runs persistence
+        - name: mlruns-volume
+          mountPath: "/home/cuong/ml_pipeline_template/mlruns"
+        # [FEAST SPECIFIC] Shared volume for Feature Store (Registry + Offline Store)
+        # Mounted at the location where 'features.py' expects data
+        - name: feast-data-volume
+          mountPath: "/home/cuong/ml_pipeline_template/feature_repo_etth1/data"
+
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # 1. 'feast apply' to register features in registry.db (on shared volume)
+          # 2. Run training pipeline using Feast configuration
+          cd /home/cuong/ml_pipeline_template/feature_repo_etth1 && feast apply && cd /home/cuong/ml_pipeline_template && python -m mlproject.src.pipeline.dag_run train -e /home/cuong/ml_pipeline_template/mlproject/configs/experiments/etth3_feast.yaml -p /home/cuong/ml_pipeline_template/mlproject/configs/pipelines/standard_train.yaml
+
+        env:
+        # [MLFLOW] Connecting to MLflow Service in Cluster
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+      volumes:
+      # [HOSTPATH] Shared volume for MLflow artifacts
+      - name: mlruns-volume
+        hostPath:
+          path: "/home/cuong/ml_pipeline_template/mlruns"
+          type: DirectoryOrCreate
+      # [FEAST SPECIFIC] Shared volume for Feature Store data
+      - name: feast-data-volume
+        hostPath:
+          path: "/home/cuong/ml_pipeline_template/feature_repo_etth1/data"
+          type: DirectoryOrCreate

@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-prediction-api-feast
+  labels:
+    app: ml-prediction
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ml-prediction
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ml-prediction
+        version: v1
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      # [FEAST SPECIFIC] Init Container to seed data and fix permissions
+      initContainers:
+      - name: fix-permissions-seed-data
+        image: ml-pipeline-train:latest # Using train image because it has the source data
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/bash
+        - -c
+        - |
+          if [ "{{DATA_TYPE}}" = "tabular" ]; then
+            echo "[Init] Running Titanic ingestion for tabular data into staging area"
+            cd {{PROJECT_ROOT}} && python -m mlproject.src.pipeline.feature_ops.ingest_titanic --csv mlproject/data/titanic.csv --repo {{PROJECT_ROOT}}/{{REPO_NAME}} && chown -R 1000:1000 {{PROJECT_ROOT}}/{{REPO_NAME}} {{PROJECT_ROOT}}/mlruns
+          else
+            echo "[Init] Running ETTh1 ingestion for timeseries data into staging area"
+            cd {{PROJECT_ROOT}} && python -m mlproject.src.pipeline.feature_ops.ingest_batch_etth1 --csv mlproject/data/ETTh1.csv --repo {{PROJECT_ROOT}}/{{REPO_NAME}} --entity location_id && chown -R 1000:1000 {{PROJECT_ROOT}}/{{REPO_NAME}} {{PROJECT_ROOT}}/mlruns
+          fi
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+        - name: feast-data-volume
+          mountPath: "{{PROJECT_ROOT}}/{{REPO_NAME}}"
+
+      containers:
+      - name: api-container
+        image: ml-pipeline-serve:latest
+        imagePullPolicy: IfNotPresent
+        # Override command to use valid experiment config
+        command: ["/bin/bash", "./mlproject/serve_api.sh"]
+        # [FEAST SPECIFIC] Use 'etth3_feast.yaml' which points to Feature Store
+        args: ["-e", "mlproject/configs/experiments/{{EXPERIMENT_CONFIG}}", "-a", "latest", "mlproject/configs/generated/{{SERVING_CONFIG}}"]
+
+        ports:
+        - name: http
+          containerPort: 8000
+
+        env:
+        # [MLFLOW] Use MLflow Service
+        # [MLFLOW] Use MLflow Service
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+          value: "http://mlflow-service:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+        - name: feast-data-volume
+          mountPath: "{{PROJECT_ROOT}}/{{REPO_NAME}}"
+        - name: feature-store-config
+          mountPath: "{{PROJECT_ROOT}}/{{REPO_NAME}}/feature_store.yaml"
+          subPath: feature_store.yaml
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+      volumes:
+      - name: mlruns-volume
+        hostPath:
+          path: "{{PROJECT_ROOT}}/mlruns"
+          type: DirectoryOrCreate
+      - name: feast-data-volume
+        emptyDir: {}
+      - name: feature-store-config
+        configMap:
+          name: feature-store-config

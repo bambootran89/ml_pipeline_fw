@@ -1,0 +1,16 @@
+experiment:
+  name: "ts_xgboost"
+  type: "timeseries"
+  model: "xgboost"
+  model_type: "ml"
+  hyperparams:
+    input_chunk_length: 24
+    output_chunk_length: 6
+    n_targets: 2
+    type: "regression"
+    args:
+      n_estimators: 20
+      max_depth: 3
+      learning_rate: 0.1
+      objective: "reg:squarederror"
+      early_stopping_round: 15

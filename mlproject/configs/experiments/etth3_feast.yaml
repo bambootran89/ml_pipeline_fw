@@ -1,0 +1,63 @@
+defaults:
+  - ../base/model.yaml
+  - ../base/training.yaml
+  - ../base/evaluation.yaml
+  - ../base/mlflow.yaml
+  - ../base/tuning.yaml
+
+preprocessing:
+  steps:
+    - name: fill_missing
+      method: ffill
+    - name: normalize
+      method: zscore
+  split:
+    train: 0.8
+    val: 0.0
+    test: 0.2
+  artifacts_dir: "mlproject/artifacts/preprocessing"
+
+data:
+  path: "feast://feature_repo_etth1?entity=location_id&id=1"
+  type: timeseries
+  featureview: "etth1_features"
+  start_date: "2023-01-01"
+  end_date: "2024-01-09"
+  index_col: "event_timestamp"
+  target_columns: ["HUFL", "MUFL"]
+  features:
+    - "HUFL"
+    - "MUFL"
+    - "mobility_inflow"
+    - "HUFL_lag24"
+    - "MUFL_lag24"
+    - "HUFL_roll12_mean"
+    - "MUFL_roll12_mean"
+    - "hour_sin"
+    - "hour_cos"
+
+experiment:
+  name: "feast_xgboost"
+  type: "timeseries"
+  model: "xgboost"
+  model_type: "ml"
+  hyperparams:
+    # Initial guess (will be overridden by tuning)
+    input_chunk_length: 24
+    output_chunk_length: 6
+    n_targets: 2
+    args:
+      n_estimators: 100
+      max_depth: 5
+      learning_rate: 0.1
+      objective: "reg:squarederror"
+      early_stopping_round: 15
+
+# Override tuning settings
+tuning:
+  n_trials: 30
+  n_splits: 3
+  test_size: 24
+  optimize_metric: "mae_mean"
+  direction: "minimize"
+  n_jobs: 1

@@ -1,0 +1,61 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: training-job-standard-etth1
+  labels:
+    app: ml-training
+    job-type: training
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: ml-training
+        job-type: training
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      # [STANDARD] Init Container only fixes permissions for MLruns
+      # No Feast data copying required
+      initContainers:
+      - name: fix-permissions
+        image: busybox
+        command: ["sh", "-c", "chown -R 1000:1000 /home/cuong/ml_pipeline_template/mlruns"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "/home/cuong/ml_pipeline_template/mlruns"
+
+      containers:
+      - name: trainer
+        image: ml-pipeline-train:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "/home/cuong/ml_pipeline_template/mlruns"
+
+        command:
+        - /bin/bash
+        - -c
+        - |
+          # [STANDARD] Simple training
+          cd /home/cuong/ml_pipeline_template && python -m mlproject.src.pipeline.dag_run train -e /home/cuong/ml_pipeline_template/mlproject/configs/experiments/etth3.yaml -p /home/cuong/ml_pipeline_template/mlproject/configs/pipelines/nested_suppipeline.yaml
+
+        env:
+        # [MLFLOW] Connecting to MLflow Service
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+      volumes:
+      - name: mlruns-volume
+        hostPath:
+          path: "/home/cuong/ml_pipeline_template/mlruns"
+          type: DirectoryOrCreate

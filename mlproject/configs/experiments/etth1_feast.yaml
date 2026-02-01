@@ -1,0 +1,53 @@
+defaults:
+  - ../base/model.yaml
+  - ../base/training.yaml
+  - ../base/evaluation.yaml
+  - ../base/mlflow.yaml
+  - ../base/tuning.yaml
+preprocessing:
+  steps:
+    - name: fill_missing
+      method: ffill
+    - name: normalize
+      method: zscore
+  split:
+    train: 0.8
+    val: 0.0
+    test: 0.2
+  artifacts_dir: "mlproject/artifacts/preprocessing"
+
+data:
+  # Assumes `mlproject/feature_repo` exists and has `feature_service` defined
+  path: "feast://feature_repo_etth1?entity=location_id&id=1"
+  type: timeseries
+  featureview: "etth1_features"
+  start_date: "2023-01-01"
+  end_date: "2024-01-09"
+  entity_key: "location_id"
+  index_col: "event_timestamp"
+  target_columns: ["HUFL", "MUFL"]
+  features:
+  - "HUFL"
+  - "MUFL"
+  - "mobility_inflow"
+  - "HUFL_lag24"
+  - "MUFL_lag24"
+  - "HUFL_roll12_mean"
+  - "MUFL_roll12_mean"
+  - "hour_sin"
+  - "hour_cos"
+
+experiment:
+  name: "feast_multivariate_tft"
+  type: "multivariate"
+  model: "tft"
+  model_type: "dl"
+  hyperparams:
+    input_chunk_length: 24
+    n_features: 9
+    n_targets: 2
+    output_chunk_length: 6
+    n_epochs: 20
+    batch_size: 16
+    hidden_size: 64
+    num_layers: 2

@@ -1,0 +1,131 @@
+pipeline:
+  name: parallel_ensemble_tune
+  steps:
+  - id: load_data
+    type: data_loader
+    enabled: true
+  - id: preprocess
+    type: preprocessor
+    enabled: true
+    log_artifact: true
+    artifact_type: preprocess
+    depends_on:
+    - load_data
+    is_train: true
+  - id: prepare_data
+    type: datamodule
+    depends_on:
+    - preprocess
+    wiring:
+      inputs:
+        features: preprocessed_data
+        targets: target_data
+      outputs:
+        datamodule: prepare_data_datamodule
+  - id: tune_xgboost_branch
+    type: tuner
+    enabled: true
+    depends_on: []
+    target_model_id: xgboost_branch
+  - id: tune_catboost_branch
+    type: tuner
+    enabled: true
+    depends_on: []
+    target_model_id: catboost_branch
+  - id: tune_kmeans_branch
+    type: tuner
+    enabled: true
+    depends_on: []
+    target_model_id: kmeans_branch
+  - id: ensemble_models
+    type: parallel
+    enabled: true
+    depends_on:
+    - prepare_data
+    max_workers: 3
+    branches:
+    - id: xgboost_branch
+      type: trainer
+      log_artifact: true
+      artifact_type: model
+      wiring:
+        inputs:
+          datamodule: prepare_data_datamodule
+        outputs:
+          model: xgboost_branch_model
+      use_tuned_params: true
+      tune_step_id: tune_xgboost_branch
+      depends_on:
+      - tune_xgboost_branch
+    - id: catboost_branch
+      type: trainer
+      log_artifact: true
+      artifact_type: model
+      wiring:
+        inputs:
+          datamodule: prepare_data_datamodule
+        outputs:
+          model: catboost_branch_model
+      use_tuned_params: true
+      tune_step_id: tune_catboost_branch
+      depends_on:
+      - tune_catboost_branch
+    - id: kmeans_branch
+      type: clustering
+      model_name: kmean
+      log_artifact: true
+      artifact_type: model
+      output_as_feature: true
+      hyperparams:
+        n_clusters: 3
+      wiring:
+        inputs:
+          datamodule: prepare_data_datamodule
+        outputs:
+          features: cluster_features
+          model: kmeans_branch_model
+      use_tuned_params: true
+      tune_step_id: tune_kmeans_branch
+      depends_on:
+      - tune_kmeans_branch
+  - id: eval_xgb
+    type: evaluator
+    enabled: true
+    depends_on:
+    - ensemble_models
+    wiring:
+      inputs:
+        model: xgboost_branch_model
+        datamodule: prepare_data_datamodule
+      outputs:
+        metrics: xgb_metrics
+  - id: eval_cat
+    type: evaluator
+    enabled: true
+    depends_on:
+    - ensemble_models
+    wiring:
+      inputs:
+        model: catboost_branch_model
+        datamodule: prepare_data_datamodule
+      outputs:
+        metrics: cat_metrics
+  - id: eval_kmean
+    type: evaluator
+    enabled: true
+    depends_on:
+    - ensemble_models
+    step_eval_type: clustering
+    wiring:
+      inputs:
+        model: kmeans_branch_model
+        datamodule: prepare_data_datamodule
+      outputs:
+        metrics: kmean_metrics
+  - id: log_results
+    type: logger
+    enabled: true
+    depends_on:
+    - eval_xgb
+    - eval_cat
+    - eval_kmean

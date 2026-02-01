@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-prediction-api-standard
+  labels:
+    app: ml-prediction
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ml-prediction
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ml-prediction
+        version: v1
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      # [STANDARD] Init Container only fixes permissions for MLruns
+      initContainers:
+      - name: fix-permissions
+        image: busybox
+        command: ["sh", "-c", "chown -R 1000:1000 {{PROJECT_ROOT}}/mlruns"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+
+      containers:
+      - name: api-container
+        image: ml-pipeline-serve:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "./mlproject/serve_api.sh"]
+        # [STANDARD] Use standard experiment config 'etth3.yaml'
+        args: ["-e", "mlproject/configs/experiments/{{EXPERIMENT_CONFIG}}", "-a", "latest", "mlproject/configs/generated/{{SERVING_CONFIG}}"]
+
+        ports:
+        - name: http
+          containerPort: 8000
+
+        env:
+        # [MLFLOW] Use MLflow Service
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+      volumes:
+      - name: mlruns-volume
+        hostPath:
+          path: "{{PROJECT_ROOT}}/mlruns"
+          type: DirectoryOrCreate

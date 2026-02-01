@@ -1,0 +1,89 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: training-job-feast-etth1
+  labels:
+    app: ml-training
+    job-type: training
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: ml-training
+        job-type: training
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 1000  # Run as mluser (uid 1000)
+        runAsGroup: 1000
+        fsGroup: 1000    # Ensure mounted volumes are writable by group 1000
+
+      # [FEAST SPECIFIC] Init Container to seed data
+      # Why: The host volume is initially empty. The image contains 'features.parquet'.
+      # We copy data from image -> shared volume so the main container can access it via the mount.
+      initContainers:
+      - name: fix-permissions-seed-data
+        image: ml-pipeline-train:latest
+        imagePullPolicy: IfNotPresent
+        # Command: Copy data from image location to shared mount, then fix ownership
+        command:
+        - /bin/bash
+        - -c
+        - |
+          if [ "{{DATA_TYPE}}" = "tabular" ]; then
+            echo "[Init] Running Titanic ingestion for tabular data into staging area"
+            cd {{PROJECT_ROOT}} && python -m mlproject.src.pipeline.feature_ops.ingest_titanic --csv mlproject/data/titanic.csv --repo {{PROJECT_ROOT}}/{{REPO_NAME}} && chown -R 1000:1000 {{PROJECT_ROOT}}/{{REPO_NAME}} {{PROJECT_ROOT}}/mlruns
+          else
+            echo "[Init] Running ETTh1 ingestion for timeseries data into staging area"
+            cd {{PROJECT_ROOT}} && python -m mlproject.src.pipeline.feature_ops.ingest_batch_etth1 --csv mlproject/data/ETTh1.csv --repo {{PROJECT_ROOT}}/{{REPO_NAME}} --entity location_id && chown -R 1000:1000 {{PROJECT_ROOT}}/{{REPO_NAME}} {{PROJECT_ROOT}}/mlruns
+          fi
+        securityContext:
+          runAsUser: 0   # Run as root to allow chown
+        volumeMounts:
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+        - name: feast-data-volume
+          mountPath: "{{PROJECT_ROOT}}/{{REPO_NAME}}"
+
+      containers:
+      - name: trainer
+        image: ml-pipeline-train:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        # [PERSISTENCE] MLflow runs persistence
+        - name: mlruns-volume
+          mountPath: "{{PROJECT_ROOT}}/mlruns"
+        # [FEAST SPECIFIC] Shared volume for Feature Store (Registry + Offline Store)
+        # Mounted at the location where 'features.py' expects data
+        - name: feast-data-volume
+          mountPath: "{{PROJECT_ROOT}}/feature_repo_etth1/data"
+
+        command:
+        - /bin/bash
+        - -c
+        - |
+
+          # 1. Skip 'feast apply' as registry is pre-populated by ingestion script
+          # 2. Run training pipeline using Feast configuration
+          cd {{PROJECT_ROOT}}/feature_repo_etth1 && feast apply && cd {{PROJECT_ROOT}} && python -m mlproject.src.pipeline.dag_run train -e {{PROJECT_ROOT}}/mlproject/configs/experiments/{{EXPERIMENT_CONFIG}} -p {{PROJECT_ROOT}}/mlproject/configs/pipelines/{{PIPELINE_CONFIG}}
+
+        env:
+        # [MLFLOW] Connecting to MLflow Service in Cluster
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+
+      volumes:
+      # [HOSTPATH] Shared volume for MLflow artifacts
+      - name: mlruns-volume
+        hostPath:
+          path: "{{PROJECT_ROOT}}/mlruns"
+          type: DirectoryOrCreate
+      # [FEAST SPECIFIC] Shared volume for Feature Store data
+      - name: feast-data-volume
+        hostPath:
+          path: "{{PROJECT_ROOT}}/feature_repo_etth1/data"
+          type: DirectoryOrCreate

@@ -1,0 +1,113 @@
+pipeline:
+  name: dynamic_adapter_train_tune
+  steps:
+  - id: load_data
+    type: data_loader
+    enabled: true
+  - id: preprocess
+    type: preprocessor
+    log_artifact: true
+    artifact_type: preprocess
+    enabled: true
+    depends_on:
+    - load_data
+    is_train: true
+  - id: impute_nan
+    type: dynamic_adapter
+    enabled: true
+    log_artifact: true
+    artifact_type: preprocess
+    depends_on:
+    - preprocess
+    class_path: sklearn.impute.SimpleImputer
+    hyperparams:
+      strategy: mean
+    run_method: fit_transform
+    wiring:
+      inputs:
+        X: preprocessed_data
+      outputs:
+        output: imputed_data
+  - id: tune_kmeans_dynamic
+    type: tuner
+    enabled: true
+    depends_on:
+    - impute_nan
+    target_model_id: kmeans_dynamic
+  - id: kmeans_dynamic
+    type: dynamic_adapter
+    enabled: true
+    log_artifact: true
+    artifact_type: model
+    depends_on:
+    - tune_kmeans_dynamic
+    - impute_nan
+    class_path: sklearn.cluster.KMeans
+    run_method: fit_predict
+    hyperparams:
+      n_clusters: 5
+      max_iter: 100
+    wiring:
+      inputs:
+        X: imputed_data
+      outputs:
+        labels: cluster_labels
+    use_tuned_params: true
+    tune_step_id: tune_kmeans_dynamic
+  - id: cluster_profiling
+    type: profiling
+    enabled: true
+    depends_on:
+    - kmeans_dynamic
+    params:
+      include_keys:
+      - cluster_labels
+  - id: prepare_data
+    type: datamodule
+    depends_on:
+    - preprocess
+    wiring:
+      inputs:
+        features: preprocessed_data
+        targets: target_data
+      outputs:
+        datamodule: prepare_data_datamodule
+  - id: tune_xgboost_model
+    type: tuner
+    enabled: true
+    depends_on:
+    - kmeans_dynamic
+    target_model_id: xgboost_model
+  - id: xgboost_model
+    type: trainer
+    log_artifact: true
+    artifact_type: model
+    enabled: true
+    depends_on:
+    - tune_xgboost_model
+    - kmeans_dynamic
+    output_as_feature: true
+    wiring:
+      inputs:
+        datamodule: prepare_data_datamodule
+      outputs:
+        model: xgboost_model_model
+        features: xgboost_prediction
+    use_tuned_params: true
+    tune_step_id: tune_xgboost_model
+  - id: evaluate
+    type: evaluator
+    enabled: true
+    depends_on:
+    - xgboost_model
+    wiring:
+      inputs:
+        model: xgboost_model_model
+        datamodule: prepare_data_datamodule
+      outputs:
+        metrics: evaluation_metrics
+  - id: log_results
+    type: logger
+    enabled: true
+    depends_on:
+    - evaluate

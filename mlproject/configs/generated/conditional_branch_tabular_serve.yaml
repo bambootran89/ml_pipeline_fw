@@ -1,0 +1,65 @@
+pipeline:
+  name: conditional_branch_tabular_serve
+  steps:
+  - id: init_artifacts
+    type: mlflow_loader
+    enabled: true
+    alias: latest
+    load_map:
+    - step_id: train_tab_catboost
+      context_key: fitted_train_tab_catboost
+    - step_id: train_tab_xgboost
+      context_key: fitted_train_tab_xgboost
+    - step_id: preprocess
+      context_key: fitted_preprocess
+  - id: preprocess
+    type: preprocessor
+    log_artifact: true
+    artifact_type: preprocess
+    enabled: true
+    depends_on:
+    - init_artifacts
+    is_train: false
+    alias: latest
+    instance_key: fitted_preprocess
+  - id: model_selection
+    type: branch
+    enabled: true
+    depends_on:
+    - prepare_data
+    condition:
+      key: feature_columns_size
+      operator: '>'
+      value: 4
+    if_true:
+      id: train_tab_catboost_inference
+      type: feature_inference
+      enabled: true
+      depends_on:
+      - preprocess
+      source_model_key: fitted_train_tab_catboost
+      base_features_key: preprocessed_data
+      output_key: train_tab_catboost_predictions
+      apply_windowing: false
+    if_false:
+      id: train_tab_xgboost_inference
+      type: feature_inference
+      enabled: true
+      depends_on:
+      - preprocess
+      source_model_key: fitted_train_tab_xgboost
+      base_features_key: preprocessed_data
+      output_key: train_tab_xgboost_predictions
+      apply_windowing: false
+  - id: final_profiling
+    type: profiling
+    enabled: true
+    depends_on:
+    - model_selection
+    exclude_keys:
+    - cfg
+    - preprocessor
+    - df
+    - train_df
+    - val_df
+    - test_df

@@ -1,0 +1,41 @@
+defaults:
+  - ../base/model.yaml
+  - ../base/training.yaml
+  - ../base/evaluation.yaml
+  - ../base/mlflow.yaml
+  - ../base/data.yaml
+  - ../base/tuning.yaml
+
+preprocessing:
+  steps:
+    - name: fill_missing
+      method: ffill
+    - name: normalize
+      method: zscore
+  split:
+    train: 0.8
+    val: 0.0
+    test: 0.2
+  artifacts_dir: "mlproject/artifacts/preprocessing"
+
+data:
+  path: "mlproject/data/ETTh1.csv"   # optional demo
+  index_col: "date"
+  target_columns: ["HUFL","MUFL"]
+  features: ["HUFL", "MUFL", "mobility_inflow"]
+  return_type: pandas
+  type: timeseries
+
+experiment:
+  name: "tune_univariate_nlinear"
+  type: "univariate"
+  model: "nlinear"
+  model_type: "dl"
+  hyperparams:
+    input_chunk_length: 24
+    n_features: 3
+    n_targets: 2
+    output_chunk_length: 6
+    n_epochs: 20
+    batch_size: 16
+    hidden: 128

@@ -1,0 +1,22 @@
+defaults:
+  - ../base/preprocessing.yaml
+  - ../base/model.yaml
+  - ../base/training.yaml
+  - ../base/evaluation.yaml
+  - ../base/mlflow.yaml
+  - ../base/data.yaml
+
+
+experiment:
+  name: "univariate_nlinear"
+  type: "univariate"
+  model: "nlinear"
+  model_type: "dl"
+  hyperparams:
+    input_chunk_length: 24
+    n_features: 3
+    n_targets: 2
+    output_chunk_length: 6
+    n_epochs: 20
+    batch_size: 16
+    hidden: 128

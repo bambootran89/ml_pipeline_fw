@@ -1,0 +1,7 @@
+training:
+  batch_size: 16
+  num_workers: 0
+  n_epochs: 2
+  lr: 1e-3
+  device: "cpu"
+  artifacts_dir: "mlproject/artifacts/models"
