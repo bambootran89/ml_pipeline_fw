@@ -101,3 +101,7 @@ build/
 # Ignore all directories named 'generated'
 generated/
 **/generated/
+
+# Ensure core 'data' packages required for imports remain tracked
+!mlproject/src/pipeline/steps/data/
+!mlproject/src/pipeline/steps/data/*
