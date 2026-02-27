@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, Generator, Optional
 
 import mlflow
+from mlflow.exceptions import MlflowException, RestException
 from mlflow.tracking import MlflowClient
 from omegaconf import DictConfig, OmegaConf
 
@@ -380,9 +381,9 @@ class MLflowManager:
                 python_model=wrapped,
                 registered_model_name=name,
             )
-        except Exception as exc:
-            logger.info(
-                f"[MLflowManager] Warning: Failed to log component '{name}' → {exc}"
+        except MlflowException as exc:
+            logger.error(
+                f"[MLflowManager] Error: Failed to log component '{name}' → {exc}"
             )
             return None
 
@@ -391,13 +392,13 @@ class MLflowManager:
         try:
             mv = client.get_model_version_by_alias(name, "latest")
             _ = mv.version
-        except Exception:
+        except (RestException, MlflowException):
             try:
                 reg = mlflow.register_model(f"runs:/{run.info.run_id}/{name}", name)
                 _ = reg.version
-            except Exception as reg_exc:
-                logger.info(
-                    f"[MLflowManager] Warning: Registry registration \
+            except MlflowException as reg_exc:
+                logger.error(
+                    f"[MLflowManager] Error: Registry registration \
                       failed for '{name}' → {reg_exc}"
                 )
                 return f"runs:/{run.info.run_id}/{name}"
@@ -490,9 +491,9 @@ class MLflowManager:
             )
             return loaded
 
-        except Exception as fb_exc:
-            logger.info(f"[MLflowManager] Latest fallback also failed for '{name}'.")
-            logger.info(f"[MLflowManager] Fallback error: {fb_exc}")
+        except MlflowException as fb_exc:
+            logger.warning(f"[MLflowManager] Latest fallback also failed for '{name}'.")
+            logger.warning(f"[MLflowManager] Fallback error: {fb_exc}")
             return None
 
     def _unwrap(self, loaded: Any, name: str) -> Optional[Any]:
@@ -573,11 +574,11 @@ class MLflowManager:
                     logger.info(
                         f"[MLflowManager] No versions found for '{name}' in registry."
                     )
-            except Exception as exc:
-                logger.info(
+            except (RestException, MlflowException) as exc:
+                logger.warning(
                     f"[MLflowManager] Failed to resolve 'latest' version for '{name}'."
                 )
-                logger.info(f"[MLflowManager] Error: {exc}")
+                logger.warning(f"[MLflowManager] Error: {exc}")
 
         else:
             # Try with specified alias
@@ -589,9 +590,11 @@ class MLflowManager:
                 loaded = mlflow.pyfunc.load_model(model_uri)
                 logger.info(f"[MLflowManager] Loaded '{name}' via alias '{alias}'.")
                 return self._unwrap(loaded, name)
-            except Exception as exc:
-                logger.info(f"[MLflowManager] Alias '{alias}' not found for '{name}'.")
-                logger.info(f"[MLflowManager] Root error: {exc}")
+            except (RestException, MlflowException) as exc:
+                logger.warning(
+                    f"[MLflowManager] Alias '{alias}' not found for '{name}'."
+                )
+                logger.warning(f"[MLflowManager] Root error: {exc}")
 
         # Final fallback: try to load from latest run
         logger.info(f"[MLflowManager] Falling back to latest run for '{name}'...")
