@@ -22,6 +22,7 @@ Usage:
 """
 
 import argparse
+import logging
 import os
 import subprocess
 import sys
@@ -29,6 +30,9 @@ import traceback
 from pathlib import Path
 
 from mlproject.src.generator.api_generator import ApiGenerator
+
+logger = logging.getLogger(__name__)
+
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -84,14 +88,14 @@ def _run_server(api_path: str, framework: str, host: str, port: int) -> None:
         host: Host to bind to.
         port: Port to bind to.
     """
-    print(f"\n[3/3] Starting {framework.upper()} server...")
-    print(f"\n{'='*60}")
-    print(f"API starting at: http://{host}:{port}")
-    print(f"API docs: http://{host}:{port}/docs")
-    print(f"Health check: http://{host}:{port}/health")
-    print(f"{'='*60}")
-    print("\nPress Ctrl+C to stop the server\n")
-    print("-" * 60)
+    logger.info(f"\n[3/3] Starting {framework.upper()} server...")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"API starting at: http://{host}:{port}")
+    logger.info(f"API docs: http://{host}:{port}/docs")
+    logger.info(f"Health check: http://{host}:{port}/health")
+    logger.info(f"{'='*60}")
+    logger.info("\nPress Ctrl+C to stop the server\n")
+    logger.info("-" * 60)
 
     try:
         env = os.environ.copy()
@@ -104,11 +108,11 @@ def _run_server(api_path: str, framework: str, host: str, port: int) -> None:
             cwd=str(project_root),
         )
     except KeyboardInterrupt:
-        print("\n\n" + "=" * 60)
-        print("Server stopped by user")
-        print("=" * 60)
+        logger.info("\n\n" + "=" * 60)
+        logger.info("Server stopped by user")
+        logger.info("=" * 60)
     except Exception as e:
-        print(f"\nServer failed: {e}")
+        logger.info(f"\nServer failed: {e}")
         traceback.print_exc()
         sys.exit(1)
 
@@ -131,18 +135,18 @@ def generate_and_run(
         port: Port to bind to.
         alias: MLflow model alias.
     """
-    print("=" * 60)
-    print(f"Auto-Generate & Run {framework.upper()} API")
-    print("=" * 60)
-    print(f"Experiment config: {experiment_config_path}")
-    print(f"Serve config: {serve_config_path}")
-    print(f"Framework: {framework}")
-    print(f"Address: {host}:{port}")
-    print(f"Alias: {alias}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info(f"Auto-Generate & Run {framework.upper()} API")
+    logger.info("=" * 60)
+    logger.info(f"Experiment config: {experiment_config_path}")
+    logger.info(f"Serve config: {serve_config_path}")
+    logger.info(f"Framework: {framework}")
+    logger.info(f"Address: {host}:{port}")
+    logger.info(f"Alias: {alias}")
+    logger.info("=" * 60)
 
     # Step 1: Generate API code
-    print("\n[1/3] Generating API code...")
+    logger.info("\n[1/3] Generating API code...")
     generator = ApiGenerator()
 
     try:
@@ -153,15 +157,15 @@ def generate_and_run(
             experiment_config_path=experiment_config_path,
             alias=alias,
         )
-        print(f"Generated: {api_path}")
+        logger.info(f"Generated: {api_path}")
     except Exception as e:
-        print(f"Generation failed: {e}")
+        logger.info(f"Generation failed: {e}")
         sys.exit(1)
 
     # Step 2: Configure server settings
-    print("\n[2/3] Configuring server settings...")
+    logger.info("\n[2/3] Configuring server settings...")
     _configure_server_settings(api_path, framework, host, port)
-    print(f"Configured: {host}:{port}")
+    logger.info(f"Configured: {host}:{port}")
 
     # Step 3: Run server
     _run_server(api_path, framework, host, port)
@@ -232,7 +236,7 @@ Examples:
 
     # Verify experiment config exists
     if not Path(args.experiment_config).exists():
-        print(f"Error: Experiment config not found: {args.experiment_config}")
+        logger.info(f"Error: Experiment config not found: {args.experiment_config}")
         sys.exit(1)
 
     # Generate and run

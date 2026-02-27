@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from omegaconf import DictConfig, OmegaConf
@@ -13,6 +14,8 @@ from ...config import GeneratorConfig
 from ...constants import CONTEXT_KEYS, STEP_CONSTANTS
 from .base import BasePipelineBuilder
 from .loader import LoaderBuilder
+
+logger = logging.getLogger(__name__)
 
 
 class ServeBuilder(BasePipelineBuilder):
@@ -349,7 +352,7 @@ class ServeBuilder(BasePipelineBuilder):
             additional_keys = self.extract_additional_feature_keys(producer)
             if additional_keys:
                 config["additional_feature_keys"] = additional_keys
-                print(
+                logger.info(
                     f"[ServeBuilder] Propagating additional_feature_keys to {inf_id}: "
                     f"{additional_keys}"
                 )

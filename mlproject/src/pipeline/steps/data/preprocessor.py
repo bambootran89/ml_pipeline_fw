@@ -3,6 +3,7 @@
 Supports loading preprocessor from MLflow in eval/serve mode.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -12,6 +13,8 @@ from mlproject.src.pipeline.steps.core.constants import ColumnNames, ContextKeys
 from mlproject.src.pipeline.steps.core.factory import StepFactory
 from mlproject.src.pipeline.steps.core.utils import ConfigAccessor
 from mlproject.src.preprocess.offline import OfflinePreprocessor
+
+logger = logging.getLogger(__name__)
 
 
 class PreprocessorStep(BasePipelineStep):
@@ -139,7 +142,7 @@ class PreprocessorStep(BasePipelineStep):
         pd.DataFrame
             DataFrame with preprocessed training data.
         """
-        print(f"[{self.step_id}] Train flow - fitting offline preprocessor.")
+        logger.info(f"[{self.step_id}] Train flow - fitting offline preprocessor.")
 
         preprocessor = OfflinePreprocessor(is_train=True, cfg=self.cfg)
 
@@ -177,7 +180,7 @@ class PreprocessorStep(BasePipelineStep):
         pd.DataFrame
             DataFrame with transformed test data.
         """
-        print(f"[{self.step_id}] Eval flow - restoring from MLflow.")
+        logger.info(f"[{self.step_id}] Eval flow - restoring from MLflow.")
 
         transform_manager = context.get(self.instance_key)
 
@@ -194,9 +197,9 @@ class PreprocessorStep(BasePipelineStep):
 
         if is_split_input:
             df_transformed[ColumnNames.DATASET] = ColumnNames.TEST
-            print(f"[{self.step_id}] Upstream split used -> labeled as test.")
+            logger.info(f"[{self.step_id}] Upstream split used -> labeled as test.")
         else:
-            print(
+            logger.info(
                 f"No split detected at [{self.step_id}]-> \
                   datamodule will use default setting split data."
             )

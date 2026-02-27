@@ -1,9 +1,12 @@
+import logging
 from typing import Any, Tuple
 
 import torch
 from torch import nn
 
 from mlproject.src.models.base import DLModelWrapperBase
+
+logger = logging.getLogger(__name__)
 
 
 class TFTFallback(nn.Module):
@@ -66,7 +69,7 @@ class TFTWrapper(DLModelWrapperBase):
         Args:
             model_type (str): type of model
         """
-        print(f"building {model_type}")
+        logger.info(f"building {model_type}")
         hidden = self.cfg.get("hidden_size", 64)
         layers = self.cfg.get("num_layers", 1)
         input_dim = self.cfg.get("n_features", 4)

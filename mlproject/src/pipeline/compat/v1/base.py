@@ -5,6 +5,7 @@ Abstract base pipeline defining a safe,
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -15,6 +16,8 @@ from mlproject.src.datamodule.factory import DataModuleFactory
 from mlproject.src.models.model_factory import ModelFactory
 from mlproject.src.tracking.mlflow_manager import MLflowManager
 from mlproject.src.trainer.factory import TrainerFactory
+
+logger = logging.getLogger(__name__)
 
 
 class BasePipeline(ABC):
@@ -49,7 +52,9 @@ class BasePipeline(ABC):
         self.model_name = str(model).lower() if model else "undefined"
         self.model_type = str(mtype).lower() if mtype else "undefined"
 
-        print(f"[Pipeline] Init -> model='{self.model_name}', type='{self.model_type}'")
+        logger.info(
+            f"[Pipeline] Init -> model='{self.model_name}', type='{self.model_type}'"
+        )
 
     def _get_components(
         self,
@@ -58,22 +63,22 @@ class BasePipeline(ABC):
         """
         Initialize core components using cached pipeline metadata.
         """
-        print(f"[Pipeline] Approach keys: {list(self.exp.keys())}")
+        logger.info(f"[Pipeline] Approach keys: {list(self.exp.keys())}")
 
         if "model" not in self.exp or "model_type" not in self.exp:
-            print("[Pipeline] Missing required keys")
+            logger.info("[Pipeline] Missing required keys")
             raise KeyError("approach must contain 'model' and 'model_type'")
 
-        print(
+        logger.info(
             f"[Pipeline] Build -> model='{self.model_name}', type='{self.model_type}'"
         )
 
         wrapper = ModelFactory.create(self.model_name, self.cfg)
-        print(f"[Pipeline] Wrapper: {type(wrapper).__name__}")
+        logger.info(f"[Pipeline] Wrapper: {type(wrapper).__name__}")
 
         datamodule = DataModuleFactory.build(self.cfg, df)
         datamodule.setup()
-        print(f"[Pipeline] DataModule: {type(datamodule).__name__}")
+        logger.info(f"[Pipeline] DataModule: {type(datamodule).__name__}")
 
         trainer = TrainerFactory.create(
             model_type=self.model_type,
@@ -81,7 +86,7 @@ class BasePipeline(ABC):
             wrapper=wrapper,
             save_dir=self.cfg.training.artifacts_dir,
         )
-        print(f"[Pipeline] Trainer: {type(trainer).__name__}")
+        logger.info(f"[Pipeline] Trainer: {type(trainer).__name__}")
 
         return datamodule, wrapper, trainer
 
@@ -101,11 +106,13 @@ class BasePipeline(ABC):
         Run pipeline end-to-end.
         """
         if data is None:
-            print("[Pipeline] Preprocess()")
+            logger.info("[Pipeline] Preprocess()")
             data = self.preprocess()
-            print(f"[Pipeline] Shape: {data.shape}")
+            logger.info(f"[Pipeline] Shape: {data.shape}")
 
-        print(f"[Pipeline] Run -> '{self.exp.get('name', 'Unnamed')}'")
-        print(f"[Pipeline] Use -> model='{self.model_name}', type='{self.model_type}'")
+        logger.info(f"[Pipeline] Run -> '{self.exp.get('name', 'Unnamed')}'")
+        logger.info(
+            f"[Pipeline] Use -> model='{self.model_name}', type='{self.model_type}'"
+        )
 
         self.run_exp(data)

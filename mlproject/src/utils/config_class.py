@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, Union, cast
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigValidator:
@@ -177,4 +180,4 @@ class ConfigMerger:
         with open(output_file, "w", encoding="utf-8") as f:
             OmegaConf.save(cfg, f)
 
-        print(f"  - Merged saved: {output_path}\n")
+        logger.info(f"  - Merged saved: {output_path}\n")

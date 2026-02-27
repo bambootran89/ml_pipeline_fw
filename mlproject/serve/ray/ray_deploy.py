@@ -10,6 +10,7 @@ This module provides:
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import signal
 from typing import Any, Dict, List, Optional, Union
@@ -35,6 +36,9 @@ from mlproject.src.preprocess.transform_manager import TransformManager
 from mlproject.src.tracking.mlflow_manager import MLflowManager
 from mlproject.src.utils.config_class import ConfigLoader
 from mlproject.src.utils.func_utils import get_env_path
+
+logger = logging.getLogger(__name__)
+
 
 ARTIFACTS_DIR: str = get_env_path(
     "ARTIFACTS_DIR",
@@ -82,11 +86,11 @@ class FeastService:
 
     def __init__(self) -> None:
         """Initialize FeastService with configuration and facade."""
-        print("[FeastService] Initializing...")
+        logger.info("[FeastService] Initializing...")
         self.cfg = ConfigLoader.load(CONFIG_PATH)
         self.facade = FeatureStoreFacade(self.cfg, mode="online")
         self.ready = True
-        print("[FeastService] Ready")
+        logger.info("[FeastService] Ready")
 
     def check_health(self) -> None:
         """Health check by Ray."""
@@ -133,14 +137,14 @@ class FeastService:
                 # entity_key
             )
 
-            print(
+            logger.info(
                 f"[FeastService] Fetched {len(df)} rows for "
                 f"{len(entities) if entities else 1} entities"
             )
             return df
 
         except Exception as e:
-            print(f"[FeastService] Error fetching features: {e}")
+            logger.info(f"[FeastService] Error fetching features: {e}")
             raise RuntimeError(f"Feast query failed: {e}") from e
 
     def is_available(self) -> bool:
@@ -220,15 +224,15 @@ class PreprocessingService:
                 artifacts_dir=self.cfg.training.artifacts_dir,
             )
             self.preprocessor.load(cfg=self.cfg)
-            print("[PreprocessingService] Loaded local TransformManager")
+            logger.info("[PreprocessingService] Loaded local TransformManager")
 
         self.ready = True
-        print("[PreprocessingService] Ready")
+        logger.info("[PreprocessingService] Ready")
 
     def check_health(self) -> None:
         """Health check by Ray - allow warmup phase."""
         if not self.ready:
-            print("[PreprocessingService] Still warming up...")
+            logger.info("[PreprocessingService] Still warming up...")
 
     async def preprocess(
         self, data: Union[Dict[str, List[Any]], pd.DataFrame]
@@ -287,7 +291,7 @@ class ModelService:
 
     def __init__(self) -> None:
         """Initialize ModelService, load MLflow manager and model."""
-        print("[ModelService] Initializing...")
+        logger.info("[ModelService] Initializing...")
         self.cfg = ConfigLoader.load(CONFIG_PATH)
         self.mlflow_manager = MLflowManager(self.cfg)
         self.model = None
@@ -295,7 +299,7 @@ class ModelService:
         self.run_id = None
         self.input_chunk_length = self._load_input_chunk_length()
         self._load_model()
-        print(
+        logger.info(
             f"[ModelService] Initialization Complete. " f"Loaded: {self.model_loaded}"
         )
 
@@ -646,7 +650,7 @@ class ForecastAPI:
                     )
                     valid_entity_ids.append(entity_id)
                 else:
-                    print(
+                    logger.info(
                         f"[WARNING] Entity {entity_id} \
                             not found in Feast result, skipping."
                     )
@@ -710,11 +714,11 @@ class ForecastAPI:
             return preds
 
         except ValueError as exc:
-            print(f"[InferenceChain] Value error: {exc}")
+            logger.info(f"[InferenceChain] Value error: {exc}")
             raise
 
         except Exception as exc:
-            print(f"[InferenceChain] Unexpected error: {exc}")
+            logger.info(f"[InferenceChain] Unexpected error: {exc}")
             raise
 
     @app.get("/health", response_model=HealthResponse)
@@ -774,20 +778,20 @@ def main() -> None:
         route_prefix="/",
     )
 
-    print("[Ray Serve] API ready at http://localhost:8000")
-    print("[Ray Serve] Endpoints:")
-    print("  - POST /predict (traditional)")
-    print("  - POST /predict/feast (Feast single/multi)")
-    print("  - POST /predict/feast/batch (Feast batch)")
-    print("  - GET /health")
-    print("[Ray Serve] Dashboard at http://localhost:8265")
-    print("[Ray Serve] Press Ctrl+C to stop")
+    logger.info("[Ray Serve] API ready at http://localhost:8000")
+    logger.info("[Ray Serve] Endpoints:")
+    logger.info("  - POST /predict (traditional)")
+    logger.info("  - POST /predict/feast (Feast single/multi)")
+    logger.info("  - POST /predict/feast/batch (Feast batch)")
+    logger.info("  - GET /health")
+    logger.info("[Ray Serve] Dashboard at http://localhost:8265")
+    logger.info("[Ray Serve] Press Ctrl+C to stop")
 
     # Keep script running
     try:
         signal.pause()
     except KeyboardInterrupt:
-        print("\n[Ray Serve] Shutting down...")
+        logger.info("\n[Ray Serve] Shutting down...")
         serve.shutdown()
         ray.shutdown()
 

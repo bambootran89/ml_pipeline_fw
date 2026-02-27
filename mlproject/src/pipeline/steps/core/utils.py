@@ -8,6 +8,7 @@ maintainability.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, cast
 
@@ -16,6 +17,8 @@ import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 
 from mlproject.src.pipeline.steps.core.constants import DataTypes, DefaultValues
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigAccessor:
@@ -353,7 +356,7 @@ class WindowBuilder:
                 windows.append(group_windows)
             except ValueError as e:
                 # Skip groups with insufficient data
-                print(f"Skipping group due to: {e}")
+                logger.info(f"Skipping group due to: {e}")
                 continue
 
         if not windows:

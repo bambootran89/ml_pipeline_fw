@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict
 
 import numpy as np
@@ -5,6 +6,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from mlproject.src.trainer.base import BaseTrainer
+
+logger = logging.getLogger(__name__)
 
 
 def infer_dims_from_batch(xb: Any, yb: Any) -> tuple[int, int]:
@@ -93,7 +96,7 @@ class DeepLearningTrainer(BaseTrainer):
                 train_loader, optimizer, torch.nn.MSELoss()
             )
             val_loss = self.validate(val_loader)
-            print(
+            logger.info(
                 f"Epoch {epoch}/{n_epochs} \
                     - train_loss={train_loss:.6f} val_mse={val_loss:.6f}"
             )

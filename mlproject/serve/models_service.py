@@ -4,6 +4,7 @@ Contains ModelsService which loads a model and runs inference
 with support for both traditional and Feast-based predictions.
 """
 
+import logging
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
@@ -19,6 +20,8 @@ from mlproject.src.features.facade import FeatureStoreFacade
 from mlproject.src.preprocess.transform_manager import TransformManager
 from mlproject.src.tracking.mlflow_manager import MLflowManager
 from mlproject.src.utils.config_class import ConfigLoader
+
+logger = logging.getLogger(__name__)
 
 
 class ModelsService:
@@ -68,7 +71,7 @@ class ModelsService:
         try:
             self.feast_facade = FeatureStoreFacade(self.cfg, mode="online")
         except Exception as e:
-            print(f"[WARNING] Feast not available: {e}")
+            logger.warning(f"[WARNING] Feast not available: {e}")
             self.feast_facade = None
 
         # Load model and preprocessor
@@ -154,11 +157,11 @@ class ModelsService:
             If no preprocessing pipeline available.
         """
         if self.preprocessor_model is not None:
-            print("[Preprocess] Using MLflow PyFunc preprocessor.")
+            logger.info("[Preprocess] Using MLflow PyFunc preprocessor.")
             return self.preprocessor_model.transform(data)
 
         if self.local_transform_manager is not None:
-            print("[Preprocess] Using local preprocessor fallback.")
+            logger.info("[Preprocess] Using local preprocessor fallback.")
             return self.local_transform_manager.transform(data)
 
         raise RuntimeError("No preprocessing pipeline available.")
@@ -193,7 +196,7 @@ class ModelsService:
             return {"prediction": preds.flatten().tolist()}
 
         except Exception as e:
-            print(f"[ModelsService] Error during prediction: {e}")
+            logger.info(f"[ModelsService] Error during prediction: {e}")
             raise
 
     def predict_feast(self, request: FeastPredictRequest) -> Dict[str, List[float]]:
@@ -258,7 +261,7 @@ class ModelsService:
             return {"prediction": preds.tolist()}
 
         except Exception as e:
-            print(f"[ModelsService] Feast prediction error: {e}")
+            logger.info(f"[ModelsService] Feast prediction error: {e}")
             raise
 
     def predict_feast_batch(
@@ -311,7 +314,7 @@ class ModelsService:
                 try:
                     # Check if entity exists
                     if entity_id not in grouped.groups:
-                        print(f"[WARNING] Entity {entity_id} not found")
+                        logger.warning(f"[WARNING] Entity {entity_id} not found")
                         continue
 
                     entity_df = grouped.get_group(entity_id).copy()
@@ -325,7 +328,9 @@ class ModelsService:
 
                     # Check sufficient data
                     if len(df_transformed) < input_length:
-                        print(f"[WARNING] Entity {entity_id}: " f"insufficient data")
+                        logger.warning(
+                            f"[WARNING] Entity {entity_id}: " f"insufficient data"
+                        )
                         continue
 
                     # Prepare and predict
@@ -337,7 +342,7 @@ class ModelsService:
                     predictions[str(entity_id)] = preds.tolist()
 
                 except Exception as e:
-                    print(f"[ERROR] Entity {entity_id} failed: {e}")
+                    logger.error(f"[ERROR] Entity {entity_id} failed: {e}")
                     continue
 
             if not predictions:
@@ -346,5 +351,5 @@ class ModelsService:
             return {"predictions": predictions}
 
         except Exception as e:
-            print(f"[ModelsService] Batch prediction error: {e}")
+            logger.info(f"[ModelsService] Batch prediction error: {e}")
             raise

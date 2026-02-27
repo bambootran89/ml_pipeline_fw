@@ -10,6 +10,7 @@ This script:
 from __future__ import annotations
 
 import argparse
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Tuple
@@ -17,6 +18,8 @@ from typing import Any, Tuple
 import pandas as pd
 
 from mlproject.src.features.factory import FeatureStoreFactory
+
+logger = logging.getLogger(__name__)
 
 
 def detect_range_from_parquet(data_path: str) -> Tuple[datetime, datetime]:
@@ -98,16 +101,16 @@ def main() -> None:
     elif args.start and args.end:
         start_date, end_date = parse_dates(args.start, args.end)
     else:
-        print("Provide --data or both --start and --end.")
+        logger.info("Provide --data or both --start and --end.")
         return
 
-    print(
+    logger.info(
         f"Materializing offline features into online store from "
         f"{start_date.isoformat()} to {end_date.isoformat()}..."
     )
 
     store.materialize(start_date, end_date)
-    print("Materialization completed successfully.")
+    logger.info("Materialization completed successfully.")
 
 
 if __name__ == "__main__":

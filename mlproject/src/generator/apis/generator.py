@@ -10,6 +10,7 @@ Supports:
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -19,6 +20,8 @@ from ..config import GeneratorConfig
 from ..constants import CONTEXT_KEYS
 from .fastapi_generator import ApiGeneratorFastAPIMixin
 from .rayserve_generator import ApiGeneratorRayServeMixin
+
+logger = logging.getLogger(__name__)
 
 
 class ApiGeneratorMixin(ApiGeneratorFastAPIMixin, ApiGeneratorRayServeMixin):
@@ -97,8 +100,10 @@ class ApiGeneratorMixin(ApiGeneratorFastAPIMixin, ApiGeneratorRayServeMixin):
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(code)
 
-        print(f"[ApiGenerator] Generated {framework} API: {output_path}")
-        print(f"[ApiGenerator] Data type: {data_config.get('data_type', 'unknown')}")
+        logger.info(f"[ApiGenerator] Generated {framework} API: {output_path}")
+        logger.info(
+            f"[ApiGenerator] Data type: {data_config.get('data_type', 'unknown')}"
+        )
         return str(output_path)
 
     def _generate_framework_code(
@@ -162,9 +167,11 @@ class ApiGeneratorMixin(ApiGeneratorFastAPIMixin, ApiGeneratorRayServeMixin):
         feature_generators = self._extract_feature_generators(list(steps))
         if feature_generators:
             data_config["feature_generators"] = feature_generators
-            print(f"[ApiGenerator] Found {len(feature_generators)} feature generators")
+            logger.info(
+                f"[ApiGenerator] Found {len(feature_generators)} feature generators"
+            )
             for fg in feature_generators:
-                print(f"  - {fg['step_id']} -> {fg['output_key']}")
+                logger.info(f"  - {fg['step_id']} -> {fg['output_key']}")
 
         return data_config, feature_generators
 
@@ -201,10 +208,10 @@ class ApiGeneratorMixin(ApiGeneratorFastAPIMixin, ApiGeneratorRayServeMixin):
         sorted_steps = self._sort_by_dependencies(filtered_steps)
 
         if sorted_steps != filtered_steps:
-            print("[ApiGenerator] Sorted by dependencies:")
+            logger.info("[ApiGenerator] Sorted by dependencies:")
             for index, step in enumerate(sorted_steps):
                 additional_keys = step.get("additional_feature_keys", [])
                 deps_info = f" (deps: {additional_keys})" if additional_keys else ""
-                print(f"  {index+1}. {step.get('id', '?')}{deps_info}")
+                logger.info(f"  {index+1}. {step.get('id', '?')}{deps_info}")
 
         return sorted_steps

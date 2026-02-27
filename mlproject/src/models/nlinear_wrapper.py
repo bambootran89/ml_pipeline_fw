@@ -1,7 +1,11 @@
+import logging
+
 import torch
 from torch import nn
 
 from mlproject.src.models.base import DLModelWrapperBase
+
+logger = logging.getLogger(__name__)
 
 
 class FallbackNLinear(nn.Module):
@@ -47,7 +51,7 @@ class NLinearWrapper(DLModelWrapperBase):
         Args:
             model_type (str):type of model
         """
-        print(f"building {model_type}")
+        logger.info(f"building {model_type}")
         hidden = self.cfg.get("hidden", 128)
         n_features = self.cfg.get("n_features", 4)
 

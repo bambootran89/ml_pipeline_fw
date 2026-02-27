@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Optional, cast
@@ -9,6 +10,8 @@ from omegaconf import DictConfig, OmegaConf
 from sklearn.base import BaseEstimator
 
 from mlproject.src.utils.func_utils import flatten_timeseries
+
+logger = logging.getLogger(__name__)
 
 
 class BaseModelWrapper(ABC):
@@ -114,7 +117,7 @@ class DLModelWrapperBase(BaseModelWrapper):
         self.build(self.model_type)
         assert self.model is not None
         self.model.load_state_dict(state["model_state"])
-        print(f"[Model Loaded] {path}")
+        logger.info(f"[Model Loaded] {path}")
         return self
 
 
@@ -186,7 +189,7 @@ class MLModelWrapper(BaseModelWrapper):
         }
 
         joblib.dump(state, os.path.join(save_dir, "model.pkl"))
-        print(f"[ML Model Saved] {os.path.join(save_dir, 'model.pkl')}")
+        logger.info(f"[ML Model Saved] {os.path.join(save_dir, 'model.pkl')}")
 
     def load(self, save_dir: str):
         """Load estimator + metadata via joblib."""
@@ -206,5 +209,5 @@ class MLModelWrapper(BaseModelWrapper):
         self.model = state["model"]
         self.ensure_built()
 
-        print(f"[ML Model Loaded] {path}")
+        logger.info(f"[ML Model Loaded] {path}")
         return self

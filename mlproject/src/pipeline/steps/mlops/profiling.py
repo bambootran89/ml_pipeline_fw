@@ -9,6 +9,7 @@ This module provides comprehensive profiling of pipeline outputs including:
 from __future__ import annotations
 
 import json
+import logging
 import textwrap
 from typing import Any, Dict, List, Optional
 
@@ -20,28 +21,30 @@ from mlproject.src.pipeline.steps.core.base import BasePipelineStep
 from mlproject.src.pipeline.steps.core.constants import ContextKeys
 from mlproject.src.pipeline.steps.core.factory import StepFactory
 
+logger = logging.getLogger(__name__)
+
 
 def pretty_print(key: str, data: Any) -> None:
     """Print pipeline outputs in a human-friendly format."""
-    print(f"\n=== {key.upper()} OUTPUT ===")
+    logger.info(f"\n=== {key.upper()} OUTPUT ===")
 
     if isinstance(data, (dict, list)):
-        print(json.dumps(data, indent=2, ensure_ascii=False))
+        logger.info(json.dumps(data, indent=2, ensure_ascii=False))
 
     elif isinstance(data, pd.DataFrame):
-        print(data.to_markdown(index=True, tablefmt="grid"))
+        logger.info(data.to_markdown(index=True, tablefmt="grid"))
 
     elif isinstance(data, np.ndarray):
         arr = data.tolist()
-        print(json.dumps(arr, indent=2, ensure_ascii=False))
+        logger.info(json.dumps(arr, indent=2, ensure_ascii=False))
 
     elif isinstance(data, (DictConfig, ListConfig)):
-        print(OmegaConf.to_yaml(data))
+        logger.info(OmegaConf.to_yaml(data))
 
     else:
-        print(data)
+        logger.info(data)
 
-    print("=" * 30)
+    logger.info("=" * 30)
 
 
 class ProfilingStep(BasePipelineStep):
@@ -387,7 +390,7 @@ class ProfilingStep(BasePipelineStep):
         This method flattens complex nested dictionaries (Data Quality, Clusters,
         Metrics) into readable tables while preserving all essential information.
         """
-        print(f"\n>>> [PROFILING REPORT: {self.step_id}]")
+        logger.info(f"\n>>> [PROFILING REPORT: {self.step_id}]")
 
         # 1. Data Quality Summary & Schema
         if profile.get("data_quality"):
@@ -419,13 +422,13 @@ class ProfilingStep(BasePipelineStep):
             )
 
         if summary_rows:
-            print("\n[Data Quality Summary]")
-            print(pd.DataFrame(summary_rows).to_string(index=False))
+            logger.info("\n[Data Quality Summary]")
+            logger.info(pd.DataFrame(summary_rows).to_string(index=False))
 
             # Print Schema for non-empty objects
             for key, data in dq_data.items():
                 if data.get("shape", [0, 0])[0] > 0:
-                    print(f"\n  > Schema: {key}")
+                    logger.info(f"\n  > Schema: {key}")
                     schema_df = pd.DataFrame(
                         {
                             "Column": data.get("columns", []),
@@ -439,12 +442,14 @@ class ProfilingStep(BasePipelineStep):
                             ],
                         }
                     )
-                    print(textwrap.indent(schema_df.to_string(index=False), "    "))
+                    logger.info(
+                        textwrap.indent(schema_df.to_string(index=False), "    ")
+                    )
 
     def _display_clusters(self, cluster_data: Dict[str, Any]) -> None:
         """Processes and displays Cluster Analysis statistics."""
         for key, data in cluster_data.items():
-            print(f"\n[Cluster Analysis: {key}]")
+            logger.info(f"\n[Cluster Analysis: {key}]")
 
             # Summary Metrics
             summary = pd.DataFrame(
@@ -457,7 +462,7 @@ class ProfilingStep(BasePipelineStep):
                     }
                 ]
             )
-            print(summary.to_string(index=False))
+            logger.info(summary.to_string(index=False))
 
             # Distribution Table
             dist = data.get("distribution", {})
@@ -469,8 +474,8 @@ class ProfilingStep(BasePipelineStep):
                     "Percentage (%)": [f"{p:.2f}%" for p in perc.values()],
                 }
             )
-            print("  Distribution:")
-            print(textwrap.indent(dist_df.to_string(index=False), "    "))
+            logger.info("  Distribution:")
+            logger.info(textwrap.indent(dist_df.to_string(index=False), "    "))
 
     def _display_performance_stats(self, profile: Dict[str, Any]) -> None:
         """
@@ -486,8 +491,8 @@ class ProfilingStep(BasePipelineStep):
                 metric_rows.append({"Group": key, "Metric": m_name, "Value": m_val})
 
         if metric_rows:
-            print("\n[ Performance Metrics ]")
-            print(pd.DataFrame(metric_rows).to_string(index=False))
+            logger.info("\n[ Performance Metrics ]")
+            logger.info(pd.DataFrame(metric_rows).to_string(index=False))
 
         # 2. Handle Prediction Statistics (Distributions)
         self._display_prediction_stats(profile.get("predictions", {}))
@@ -524,10 +529,10 @@ class ProfilingStep(BasePipelineStep):
                 )
 
         if rows:
-            print("\n[ Prediction Statistics ]")
+            logger.info("\n[ Prediction Statistics ]")
             # Display the stats in a clean table without index
             stats_df = pd.DataFrame(rows)
-            print(stats_df.to_string(index=False, justify="left"))
+            logger.info(stats_df.to_string(index=False, justify="left"))
 
 
 StepFactory.register("profiling", ProfilingStep)

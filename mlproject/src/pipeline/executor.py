@@ -5,12 +5,15 @@ Enhanced to support runtime context pre-initialization for serving mode.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from omegaconf import DictConfig
 
 from mlproject.src.pipeline.steps.core.base import BasePipelineStep
 from mlproject.src.pipeline.steps.core.factory import StepFactory
+
+logger = logging.getLogger(__name__)
 
 
 class PipelineExecutor:
@@ -44,7 +47,7 @@ class PipelineExecutor:
             step = StepFactory.create(step_config, self.cfg)
             self.steps.append(step)
 
-        print(f"[Pipeline] Built {len(self.steps)} steps")
+        logger.info(f"[Pipeline] Built {len(self.steps)} steps")
 
     def _topological_sort(self) -> List[BasePipelineStep]:
         """Sort steps by dependencies using Kahn's algorithm.
@@ -109,20 +112,20 @@ class PipelineExecutor:
 
         context: Dict[str, Any] = initial_context.copy() if initial_context else {}
 
-        print("[Pipeline] Execution order:")
+        logger.info("[Pipeline] Execution order:")
         for i, step in enumerate(sorted_steps, 1):
             status = "enabled" if step.enabled else "disabled"
-            print(f"  {i}. {step.step_id} ({status})")
+            logger.info(f"  {i}. {step.step_id} ({status})")
 
-        print("\n[Pipeline] Executing steps...")
+        logger.info("\n[Pipeline] Executing steps...")
 
         for step in sorted_steps:
             if not step.enabled:
-                print(f"[Pipeline] Skipping disabled step: {step.step_id}")
+                logger.info(f"[Pipeline] Skipping disabled step: {step.step_id}")
                 continue
 
-            print(f"\n[Pipeline] Executing: {step.step_id}")
+            logger.info(f"\n[Pipeline] Executing: {step.step_id}")
             context = step.execute(context)
 
-        print("\n[Pipeline] Execution complete")
+        logger.info("\n[Pipeline] Execution complete")
         return context

@@ -1,14 +1,19 @@
+import logging
 from copy import deepcopy
 from typing import Any, Dict, Optional
 
 import optuna
 from omegaconf import DictConfig
 
-# from mlproject.src.datamodule.splitters.timeseries import TimeSeriesFoldSplitter
 from mlproject.src.datamodule.splitters.base import BaseSplitter
 from mlproject.src.pipeline.compat.v1.cv import CrossValidationPipeline
 from mlproject.src.tracking.mlflow_manager import MLflowManager
 from mlproject.src.tuning.base import BaseTuner
+
+logger = logging.getLogger(__name__)
+
+
+# from mlproject.src.datamodule.splitters.timeseries import TimeSeriesFoldSplitter
 
 
 class OptunaTuner(BaseTuner):
@@ -183,15 +188,15 @@ class OptunaTuner(BaseTuner):
             show_progress_bar=show_progress,
         )
 
-        print("\n" + "=" * 60)
-        print("  OPTUNA TUNING COMPLETED")
-        print("=" * 60)
-        print(f"Best {self.metric_name}: {study.best_value:.6f}")
-        print("Best hyperparameters:")
+        logger.info("\n" + "=" * 60)
+        logger.info("  OPTUNA TUNING COMPLETED")
+        logger.info("=" * 60)
+        logger.info(f"Best {self.metric_name}: {study.best_value:.6f}")
+        logger.info("Best hyperparameters:")
         for key, value in study.best_params.items():
-            print(f"  {key:20} = {value}")
-        print(f"Total trials: {len(study.trials)}")
-        print("=" * 60 + "\n")
+            logger.info(f"  {key:20} = {value}")
+        logger.info(f"Total trials: {len(study.trials)}")
+        logger.info("=" * 60 + "\n")
 
         return {
             "best_params": study.best_params,

@@ -10,6 +10,7 @@ Responsibilities:
 
 from __future__ import annotations
 
+import logging
 from typing import Any, List, Optional
 
 import numpy as np
@@ -20,6 +21,8 @@ from mlproject.src.dataio.loaddata import load_from_feast
 from mlproject.src.pipeline.compat.v1.base import BasePipeline
 from mlproject.src.preprocess.offline import OfflinePreprocessor
 from mlproject.src.utils.config_class import ConfigLoader
+
+logger = logging.getLogger(__name__)
 
 
 class ServingPipeline(BasePipeline):
@@ -124,11 +127,11 @@ class ServingPipeline(BasePipeline):
             Model predictions as np.ndarray.
         """
         if data is None:
-            print("[INFERENCE] No input DataFrame, loading from Feast...")
+            logger.info("[INFERENCE] No input DataFrame, loading from Feast...")
             data = load_from_feast(self.cfg, self.time_point)
-            print(f"[INFERENCE] Loaded data shape: {data.shape}")
+            logger.info(f"[INFERENCE] Loaded data shape: {data.shape}")
 
-        print(f"[INFERENCE] Preprocessing data with shape {data.shape}")
+        logger.info(f"[INFERENCE] Preprocessing data with shape {data.shape}")
         df: pd.DataFrame = self.preprocess(data)
 
         # --- Handle timeseries vs tabular separately ---
@@ -148,26 +151,26 @@ class ServingPipeline(BasePipeline):
                     )
                     for _, g in df.groupby(entity_key)
                 ]
-                print(f"[INFERENCE] Building input window of length {win}")
+                logger.info(f"[INFERENCE] Building input window of length {win}")
 
                 x = np.vstack(arr_list).astype(np.float32)
 
-                print(f"[INFERENCE] Input window shape: {x.shape}")
+                logger.info(f"[INFERENCE] Input window shape: {x.shape}")
             else:
                 x = self._prepare_input_window(df, win, wout).astype(np.float32)
 
         else:
             # For tabular, no sequence window; use full preprocessed DataFrame
-            print("[INFERENCE] Tabular input, using full DataFrame")
+            logger.info("[INFERENCE] Tabular input, using full DataFrame")
             x = df.values.astype(np.float32)
-            print(f"[INFERENCE] Input array shape: {x.shape}")
+            logger.info(f"[INFERENCE] Input array shape: {x.shape}")
 
-        print("[INFERENCE] Running model.predict()")
+        logger.info("[INFERENCE] Running model.predict()")
         y: np.ndarray = self.model.predict(x)
-        print(f"[INFERENCE] Output shape: {y.shape}")
+        logger.info(f"[INFERENCE] Output shape: {y.shape}")
 
         if hasattr(y, "flatten"):
-            print(f"[INFERENCE] First 10 output values: {y[:10]}")
+            logger.info(f"[INFERENCE] First 10 output values: {y[:10]}")
 
-        print("[INFERENCE] Inference completed")
+        logger.info("[INFERENCE] Inference completed")
         return y

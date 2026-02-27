@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from omegaconf import DictConfig, OmegaConf
 
 from .apis.generator import ApiGeneratorMixin
 from .config import GeneratorConfig
+
+logger = logging.getLogger(__name__)
 
 
 class ApiGenerator:
@@ -33,7 +36,7 @@ class ApiGenerator:
         """Save transformed pipeline configuration to YAML file."""
         with open(path, "w", encoding="utf-8") as f:
             OmegaConf.save(config=cfg, f=f)
-        print(f"[ConfigGenerator] Successfully generated: {path}")
+        logger.info(f"[ConfigGenerator] Successfully generated: {path}")
 
     def generate_api(
         self,

@@ -8,6 +8,7 @@ Responsibilities:
 - Run evaluation and log metrics to MLflow
 """
 
+import logging
 from typing import Any, Optional
 
 import numpy as np
@@ -25,6 +26,8 @@ from mlproject.src.pipeline.compat.v1.base import BasePipeline
 from mlproject.src.preprocess.offline import OfflinePreprocessor
 from mlproject.src.utils.config_class import ConfigLoader
 from mlproject.src.utils.func_utils import flatten_metrics_for_mlflow
+
+logger = logging.getLogger(__name__)
 
 
 class EvalPipeline(BasePipeline):
@@ -93,10 +96,10 @@ class EvalPipeline(BasePipeline):
         """
 
         if self.preprocessor_model is not None:
-            print("[EvalPipeline] Using MLflow preprocessing model")
+            logger.info("[EvalPipeline] Using MLflow preprocessing model")
             return self.preprocessor_model.transform(df)
         else:
-            print("[EvalPipeline] Using local preprocessing fallback")
+            logger.info("[EvalPipeline] Using local preprocessing fallback")
             self.preprocessor.transform_manager.load(self.cfg)
             return self.preprocessor.transform(df)
 

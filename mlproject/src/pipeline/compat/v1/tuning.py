@@ -10,6 +10,8 @@ Workflow overview:
 """
 
 
+import logging
+
 from omegaconf import DictConfig
 
 from mlproject.src.datamodule.splitters.base import BaseSplitter
@@ -18,6 +20,8 @@ from mlproject.src.pipeline.compat.v1.base import BasePipeline
 from mlproject.src.pipeline.compat.v1.training import TrainingPipeline
 from mlproject.src.tuning.optuna import OptunaTuner
 from mlproject.src.utils.config_class import ConfigLoader
+
+logger = logging.getLogger(__name__)
 
 
 class TuningPipeline(BasePipeline):
@@ -77,7 +81,7 @@ class TuningPipeline(BasePipeline):
         # START PARENT RUN HERE
         # Run name: Hparam_Tuning_Experiment
         with self.mlflow_manager.start_run(run_name="Hparam_Tuning_Experiment"):
-            print(
+            logger.info(
                 "[MLflow] Started Parent Run: \
                   Hparam_Tuning_Experiment"
             )
@@ -109,9 +113,9 @@ class TuningPipeline(BasePipeline):
         # Step 5: Retrain model using best parameters
         # This is OUTSIDE the tuning run, so it will create its own standalone run
         # (or you can nest it if you prefer, but usually Retrain is a separate run)
-        print(f"\n{'=' * 60}")
-        print("  RETRAINING WITH BEST HYPERPARAMETERS")
-        print(f"{'=' * 60}\n")
+        logger.info(f"\n{'=' * 60}")
+        logger.info("  RETRAINING WITH BEST HYPERPARAMETERS")
+        logger.info(f"{'=' * 60}\n")
 
         training_pipeline = TrainingPipeline(self.cfg_path)
         training_pipeline.cfg.experiment.hyperparams = self.cfg.experiment.hyperparams

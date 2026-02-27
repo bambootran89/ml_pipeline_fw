@@ -1,5 +1,9 @@
 """Helper script to generate realistic API test data."""
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import json
 from datetime import datetime, timedelta
 
@@ -132,7 +136,7 @@ def generate_python_example():
 
 # Health check
 response = requests.get("http://localhost:8000/health")
-print(response.json())
+logger.info(response.json())
 
 # Prediction with realistic ETTh1 dataset structure
 payload = {
@@ -160,15 +164,15 @@ response = requests.post(
     "http://localhost:8000/predict",
     json=payload
 )
-print(response.json())
+logger.info(response.json())
 """
 
     return code
 
 
 if __name__ == "__main__":
-    print("Curl example:")
-    print(generate_curl_example())
-    print("\n" + "=" * 60 + "\n")
-    print("Python example:")
-    print(generate_python_example())
+    logger.info("Curl example:")
+    logger.info(generate_curl_example())
+    logger.info("\n" + "=" * 60 + "\n")
+    logger.info("Python example:")
+    logger.info(generate_python_example())

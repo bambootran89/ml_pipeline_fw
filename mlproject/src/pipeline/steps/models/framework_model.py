@@ -9,6 +9,7 @@ This module provides a unified model step that supports:
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
@@ -22,6 +23,8 @@ from mlproject.src.pipeline.steps.core.constants import DataTypes
 from mlproject.src.pipeline.steps.core.factory import StepFactory
 from mlproject.src.pipeline.steps.core.utils import ConfigAccessor, ConfigMerger
 from mlproject.src.trainer.factory import TrainerFactory
+
+logger = logging.getLogger(__name__)
 
 
 def _ensure_df(x: Any) -> pd.DataFrame:
@@ -165,7 +168,7 @@ class FrameworkModelStep(BasePipelineStep):
         """
         assert isinstance(self.experiment_config_path, str)
 
-        print(
+        logger.info(
             f"[{self.step_id}] Loading experiment config: {self.experiment_config_path}"
         )
 
@@ -277,17 +280,19 @@ class FrameworkModelStep(BasePipelineStep):
         """
         self.validate_dependencies(context)
 
-        print(
+        logger.info(
             f"[{self.step_id}] Executing model: {self.model_name} ({self.model_type})"
         )
 
         # Log config source
         if self.experiment_config_path:
-            print(f"[{self.step_id}] Config source: {self.experiment_config_path}")
+            logger.info(
+                f"[{self.step_id}] Config source: {self.experiment_config_path}"
+            )
         elif self.model_config:
-            print(f"[{self.step_id}] Config source: inline model_config")
+            logger.info(f"[{self.step_id}] Config source: inline model_config")
         else:
-            print(f"[{self.step_id}] Config source: simple override")
+            logger.info(f"[{self.step_id}] Config source: simple override")
 
         # Get and prepare data
         # Get hyperparams from effective config
@@ -299,7 +304,7 @@ class FrameworkModelStep(BasePipelineStep):
         # Build datamodule
         datamodule = self.get_input(context, "datamodule", required=False)
         if datamodule is None:
-            print("datamodule is None, the we get from data")
+            logger.info("datamodule is None, the we get from data")
             df = self._get_input_data(context)
             if df is None:
                 raise ValueError(
@@ -319,7 +324,7 @@ class FrameworkModelStep(BasePipelineStep):
         )
 
         # Train
-        print(f"[{self.step_id}] Training with hyperparams: {hyperparams}")
+        logger.info(f"[{self.step_id}] Training with hyperparams: {hyperparams}")
         trained_wrapper = trainer.train(datamodule, hyperparams)
         if self.log_artifact:
             self.register_for_discovery(context, trained_wrapper)
@@ -332,9 +337,9 @@ class FrameworkModelStep(BasePipelineStep):
         if self.output_as_feature:
             features = self._generate_features(trained_wrapper, datamodule)
             self.set_output(context, "features", features)
-            print(f"[{self.step_id}] Generated features: {features.shape}")
+            logger.info(f"[{self.step_id}] Generated features: {features.shape}")
 
-        print(f"[{self.step_id}] Model step completed")
+        logger.info(f"[{self.step_id}] Model step completed")
         return context
 
     def _generate_timeseries_features(
@@ -373,7 +378,9 @@ class FrameworkModelStep(BasePipelineStep):
                 df_preds = df_preds.fillna(0.0)
                 predictions = df_preds.values
 
-                print(f"[{self.step_id}] Padded {expected_len}->{n} (imp: bfill/ffill)")
+                logger.info(
+                    f"[{self.step_id}] Padded {expected_len}->{n} (imp: bfill/ffill)"
+                )
 
         return predictions
 

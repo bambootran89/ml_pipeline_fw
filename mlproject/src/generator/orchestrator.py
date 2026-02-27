@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -16,6 +17,8 @@ from .pipeline.builders.serve import ServeBuilder
 from .pipeline.builders.tune import TuneBuilder
 from .pipeline.feature_parser import FeaturePipelineParser
 from .pipeline.step_analyzer import StepAnalyzer
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigGenerator:
@@ -76,17 +79,23 @@ class ConfigGenerator:
 
         if not self.experiment_type:
             self.experiment_type = StepAnalyzer.infer_experiment_type(train_steps)
-            print(f"[ConfigGenerator] Inferred experiment type: {self.experiment_type}")
+            logger.info(
+                f"[ConfigGenerator] Inferred experiment type: {self.experiment_type}"
+            )
 
         if self.feature_pipeline:
-            print("[ConfigGenerator] Detected feature pipeline:")
-            print(f"  Base: {self.feature_pipeline.base_source}")
-            print(f"  Engineered features: {len(self.feature_pipeline.engineered)}")
+            logger.info("[ConfigGenerator] Detected feature pipeline:")
+            logger.info(f"  Base: {self.feature_pipeline.base_source}")
+            logger.info(
+                f"  Engineered features: {len(self.feature_pipeline.engineered)}"
+            )
             for feat in self.feature_pipeline.engineered:
                 parent_info = (
                     f" (in {feat.parent_pipeline})" if feat.parent_pipeline else ""
                 )
-                print(f"    - {feat.source_step_id} -> {feat.output_key}{parent_info}")
+                logger.info(
+                    f"    - {feat.source_step_id} -> {feat.output_key}{parent_info}"
+                )
 
         self._eval_builder = EvalBuilder(
             train_steps,
@@ -269,4 +278,4 @@ class ConfigGenerator:
         with open(path, "w", encoding="utf-8") as file:
             OmegaConf.save(config=cfg, f=file)
 
-        print(f"[ConfigGenerator] Successfully generated: {path}")
+        logger.info(f"[ConfigGenerator] Successfully generated: {path}")

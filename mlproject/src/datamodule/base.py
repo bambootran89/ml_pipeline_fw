@@ -1,3 +1,4 @@
+import logging
 import textwrap
 from typing import Tuple
 
@@ -6,6 +7,8 @@ import pandas as pd
 from torch.utils.data import DataLoader
 
 from mlproject.src.datamodule.dataset import NumpyWindowDataset
+
+logger = logging.getLogger(__name__)
 
 
 class BaseDataModule:
@@ -83,20 +86,20 @@ class BaseDataModule:
         """
         line_width = 80
         border = "=" * line_width
-        print(border)
-        print(f"DATAMODULE SUMMARY - Type: {self.data_type.upper()}")
-        print(border)
+        logger.info(border)
+        logger.info(f"DATAMODULE SUMMARY - Type: {self.data_type.upper()}")
+        logger.info(border)
 
         # Basic metadata
-        print(f"Total Samples:  {len(self.df)}")
+        logger.info(f"Total Samples:  {len(self.df)}")
 
         # Conditional display: Hide sequence info if data type is tabular
         if self.data_type.lower() != "tabular":
-            print(
+            logger.info(
                 f"Sequence:       Input={self.input_chunk}, Output={self.output_chunk}"
             )
 
-        print(f"Target Columns: {', '.join(self.target_columns)}")
+        logger.info(f"Target Columns: {', '.join(self.target_columns)}")
 
         # Full Ordered Features (Wrapped for line length)
         feat_header = "Features:       "
@@ -109,13 +112,13 @@ class BaseDataModule:
             initial_indent=feat_header,
             subsequent_indent=" " * len(feat_header),
         )
-        print(wrapped_output)
-        print(f"Total Count:    {len(self.features)} columns")
+        logger.info(wrapped_output)
+        logger.info(f"Total Count:    {len(self.features)} columns")
 
         # Data Split Shapes
-        print("-" * line_width)
+        logger.info("-" * line_width)
         self._print_shapes_summary()
-        print(border)
+        logger.info(border)
 
     def _print_shapes_summary(self) -> None:
         """
@@ -135,7 +138,7 @@ class BaseDataModule:
             else:
                 x_shape = "N/A"
                 y_shape = "N/A"
-            print(f"{name:15} Split: X={x_shape}, Y={y_shape}")
+            logger.info(f"{name:15} Split: X={x_shape}, Y={y_shape}")
 
     def setup(self) -> None:
         """Optional hook to extend setup logic."""
@@ -151,7 +154,7 @@ class BaseDataModule:
             ValueError: If no windows can be created.
         """
         if "dataset" not in self.df.columns:
-            print("Data Module uses split param to split dataframn (df)")
+            logger.info("Data Module uses split param to split dataframn (df)")
             split_cfg = self.cfg.get("preprocessing", {}).get(
                 "split",
                 {"train": 0.6, "val": 0.2, "test": 0.2},
@@ -194,7 +197,7 @@ class BaseDataModule:
                 self.x_val = self.x_test
                 self.y_val = self.y_test
         else:
-            print("Data Module uses dataset columns to split dataframe(df)")
+            logger.info("Data Module uses dataset columns to split dataframe(df)")
             cols = list(set(self.features + self.target_columns))
             train_df = self.df[self.df["dataset"] == "train"][cols].sort_index()
             test_df = self.df[self.df["dataset"] == "test"][cols].sort_index()

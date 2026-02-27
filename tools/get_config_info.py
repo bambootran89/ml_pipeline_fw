@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 
@@ -32,8 +36,8 @@ def main(cfg: DictConfig):
     registry_cfg = mlflow_cfg.get("registry", {})
     model_name = registry_cfg.get("model_name", "model")
 
-    print(experiment_name)
-    print(model_name)
+    logger.info(experiment_name)
+    logger.info(model_name)
 
 
 if __name__ == "__main__":

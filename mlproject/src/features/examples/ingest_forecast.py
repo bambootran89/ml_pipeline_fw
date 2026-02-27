@@ -5,6 +5,7 @@ Parquet persistence, and Feast feature store registration.
 
 from __future__ import annotations
 
+import logging
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,6 +22,8 @@ from mlproject.src.features.repository import FeastRepositoryManager
 from mlproject.src.features.transformers.forecast_transformers import (
     apply_forecast_engineering,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def generate_raw_sensor_data(periods: int = 200) -> pd.DataFrame:
@@ -85,10 +88,10 @@ def run_ingestion() -> None:
             source_path=str(out_path.resolve()),
         )
 
-        print(f"[INFO] Ingested and registered forecast features: {out_path}")
+        logger.info(f"[INFO] Ingested and registered forecast features: {out_path}")
 
     except Exception as exc:  # Safe catch for pylint E0712 compliance
-        print(f"[ERROR] Ingestion pipeline failed: {exc}", file=sys.stderr)
+        logger.error(f"[ERROR] Ingestion pipeline failed: {exc}")
         sys.exit(1)
 
 

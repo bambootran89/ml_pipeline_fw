@@ -14,6 +14,7 @@ reproducibility across training and inference.
 
 from __future__ import annotations
 
+import logging
 import os
 import pickle
 from typing import Any, Dict, List, Optional, TypedDict, Union, cast
@@ -22,6 +23,9 @@ import numpy as np
 import pandas as pd
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
+
+logger = logging.getLogger(__name__)
+
 
 ScalerType = Union[StandardScaler, MinMaxScaler]
 
@@ -753,19 +757,19 @@ class TransformManager:
 
         self.steps = self.normalize_preprocessing_steps(cfg)
         path = os.path.join(self.artifacts_dir, "fillna_stats.pkl")
-        print(f"Loading artifacts {path}")
+        logger.info(f"Loading artifacts {path}")
         if os.path.exists(path):
             with open(path, "rb") as f:
                 self.fillna_stats = pickle.load(f)
 
         path = os.path.join(self.artifacts_dir, "label_encoders.pkl")
-        print(f"Loading artifacts {path}")
+        logger.info(f"Loading artifacts {path}")
         if os.path.exists(path):
             with open(path, "rb") as f:
                 self.label_encoders = pickle.load(f)
 
         path = os.path.join(self.artifacts_dir, "scaler.pkl")
-        print(f"Loading artifacts {path}")
+        logger.info(f"Loading artifacts {path}")
         if os.path.exists(path):
             with open(path, "rb") as f:
                 obj = pickle.load(f)

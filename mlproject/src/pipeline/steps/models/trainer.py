@@ -6,6 +6,7 @@ factories and a prepared DataModule. Supports artifact discovery registration
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from omegaconf import OmegaConf
@@ -15,6 +16,8 @@ from mlproject.src.pipeline.steps.core.base import BasePipelineStep
 from mlproject.src.pipeline.steps.core.constants import ContextKeys
 from mlproject.src.pipeline.steps.core.factory import StepFactory
 from mlproject.src.trainer.factory import TrainerFactory
+
+logger = logging.getLogger(__name__)
 
 
 class TrainerStep(BasePipelineStep):
@@ -108,9 +111,9 @@ class TrainerStep(BasePipelineStep):
 
             best_params = context[best_params_key]
 
-            print(f"\n[{self.step_id}] Using tuned hyperparameters:")
+            logger.info(f"\n[{self.step_id}] Using tuned hyperparameters:")
             for param, value in best_params.items():
-                print(f"  - {param}: {value}")
+                logger.info(f"  - {param}: {value}")
 
             cfg_copy = OmegaConf.create(OmegaConf.to_container(self.cfg, resolve=True))
             if "args" not in cfg_copy.experiment.hyperparams:
@@ -127,7 +130,7 @@ class TrainerStep(BasePipelineStep):
         if ContextKeys.COMPOSED_FEATURE_NAMES in context:
             n_features = len(context[ContextKeys.COMPOSED_FEATURE_NAMES])
             if "n_features" in params:
-                print(
+                logger.info(
                     f"[{self.step_id}] Override n_features: "
                     f"{params['n_features']} -> {n_features}"
                 )
@@ -135,7 +138,7 @@ class TrainerStep(BasePipelineStep):
 
             # Also update input_size if it exists (common in RNNs)
             if "input_size" in params:
-                print(
+                logger.info(
                     f"[{self.step_id}] Override input_size: "
                     f"{params['input_size']} -> {n_features}"
                 )
@@ -172,7 +175,7 @@ class TrainerStep(BasePipelineStep):
         # This ensures ModelFactory builds the model with correct input dimensions
         if ContextKeys.COMPOSED_FEATURE_NAMES in context:
             n_features = len(context[ContextKeys.COMPOSED_FEATURE_NAMES])
-            print(f"[{self.step_id}] Patching config: n_features -> {n_features}")
+            logger.info(f"[{self.step_id}] Patching config: n_features -> {n_features}")
 
             # Update n_features
             if (
@@ -216,9 +219,11 @@ class TrainerStep(BasePipelineStep):
             )
             preds = trained_wrapper.predict(x_train)
             self.set_output(context, "features", preds)
-            print(f"[{self.step_id}] Generated downstream features: {preds.shape}")
+            logger.info(
+                f"[{self.step_id}] Generated downstream features: {preds.shape}"
+            )
 
-        print(f"[{self.step_id}] Model trained and registered successfully.")
+        logger.info(f"[{self.step_id}] Model trained and registered successfully.")
         return context
 
     # Internal helper methods
@@ -252,7 +257,7 @@ class TrainerStep(BasePipelineStep):
 
     def _fit_model(self, trainer: Any, datamodule: Any, context: Dict[str, Any]) -> Any:
         """Perform model fitting and return the trained wrapper."""
-        print(f"[{self.step_id}] Starting model training")
+        logger.info(f"[{self.step_id}] Starting model training")
         try:
             trained_wrapper = trainer.train(datamodule, self._get_hyperparams(context))
             return trained_wrapper

@@ -124,15 +124,15 @@ class CsvDatasetLoader(BaseDatasetLoader):
                 index_col,
             )
             df = self._read_csv(path)
-        print("\n[CSV Profiling] DataFrame result:")
-        print(f"  → rows         : {len(df)}")
-        print(f"  → columns      : {list(df.columns)}")
+        logger.info("\n[CSV Profiling] DataFrame result:")
+        logger.info(f"  → rows         : {len(df)}")
+        logger.info(f"  → columns      : {list(df.columns)}")
 
-        print("\n[CSV Profiling] head Sample:")
-        print(df.head(5))
+        logger.info("\n[CSV Profiling] head Sample:")
+        logger.info(df.head(5))
 
-        print("\n[CSV Profiling] tail Sample:")
-        print(df.tail(5))
+        logger.info("\n[CSV Profiling] tail Sample:")
+        logger.info(df.tail(5))
         return df.set_index(index_col)
 
     def _load_tabular(

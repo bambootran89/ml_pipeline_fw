@@ -45,7 +45,7 @@ def demo() -> None:
             ],
         )  # Convert Feast RetrievalJob to DataFrame if using Feast Python API
 
-        print("--- Historical Features ---\n", hist_df.head())
+        logger.info("--- Historical Features ---\n%s", hist_df.head())
 
         # 2. Materialize to online store
         store.materialize(
@@ -59,11 +59,11 @@ def demo() -> None:
             features=["forecast_view:temperature_lag24"],
         )
 
-        print(f"\n--- Online Feature (location_id=1) ---\n{online_res}")
+        logger.info(f"\n--- Online Feature (location_id=1) ---\n{online_res}")
 
     except Exception as exc:
         logger.error("Feature retrieval failed: %s", exc)
-        print(f"[ERROR] Demo failed: {exc}", file=sys.stderr)
+        logger.error(f"[ERROR] Demo failed: {exc}")
         sys.exit(1)
 
 

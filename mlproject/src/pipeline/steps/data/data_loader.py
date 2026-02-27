@@ -1,5 +1,6 @@
 """Data loading step for flexible pipeline với wiring support."""
 
+import logging
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -8,6 +9,8 @@ from mlproject.src.datamodule.loader import resolve_datasets_from_cfg
 from mlproject.src.pipeline.steps.core.base import BasePipelineStep
 from mlproject.src.pipeline.steps.core.constants import ColumnNames, ContextKeys
 from mlproject.src.pipeline.steps.core.factory import StepFactory
+
+logger = logging.getLogger(__name__)
 
 
 class DataLoaderStep(BasePipelineStep):
@@ -70,10 +73,10 @@ class DataLoaderStep(BasePipelineStep):
         self.set_output(context, "test_df", test_df)
         context[ContextKeys.IS_SPLITED_INPUT] = is_splited
 
-        print(f"[{self.step_id}] Loaded data: {df.shape}")
-        print(f"[{self.step_id}] Train: {train_df.shape}")
-        print(f"[{self.step_id}] Val: {val_df.shape}")
-        print(f"[{self.step_id}] Test: {test_df.shape}")
+        logger.info(f"[{self.step_id}] Loaded data: {df.shape}")
+        logger.info(f"[{self.step_id}] Train: {train_df.shape}")
+        logger.info(f"[{self.step_id}] Val: {val_df.shape}")
+        logger.info(f"[{self.step_id}] Test: {test_df.shape}")
 
         return context
 

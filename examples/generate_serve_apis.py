@@ -5,6 +5,10 @@ This script demonstrates how to use ConfigGenerator to automatically
 generate FastAPI and Ray Serve code from serve pipeline configurations.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from pathlib import Path
 
 from mlproject.src.generator.orchestrator import ConfigGenerator
@@ -22,15 +26,15 @@ def generate_apis_for_pipeline(
         serve_config: Path to serve pipeline YAML.
         output_dir: Output directory for generated APIs.
     """
-    print(f"\n{'='*60}")
-    print(f"Generating APIs for: {Path(train_config).stem}")
-    print(f"{'='*60}\n")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"Generating APIs for: {Path(train_config).stem}")
+    logger.info(f"{'='*60}\n")
 
     # Initialize generator
     generator = ConfigGenerator(train_config)
 
     # Generate FastAPI
-    print("1. Generating FastAPI...")
+    logger.info("1. Generating FastAPI...")
     try:
         fastapi_path = generator.generate_api(
             serve_config_path=serve_config,
@@ -38,12 +42,12 @@ def generate_apis_for_pipeline(
             framework="fastapi",
             experiment_config_path=train_config,
         )
-        print(f"   ✓ Generated: {fastapi_path}")
+        logger.info(f"   ✓ Generated: {fastapi_path}")
     except Exception as e:
-        print(f"   ✗ Failed: {e}")
+        logger.info(f"   ✗ Failed: {e}")
 
     # Generate Ray Serve
-    print("\n2. Generating Ray Serve...")
+    logger.info("\n2. Generating Ray Serve...")
     try:
         ray_path = generator.generate_api(
             serve_config_path=serve_config,
@@ -51,18 +55,18 @@ def generate_apis_for_pipeline(
             framework="ray",
             experiment_config_path=train_config,
         )
-        print(f"   ✓ Generated: {ray_path}")
+        logger.info(f"   ✓ Generated: {ray_path}")
     except Exception as e:
-        print(f"   ✗ Failed: {e}")
+        logger.info(f"   ✗ Failed: {e}")
 
-    print()
+    logger.info()
 
 
 def main() -> None:
     """Generate APIs for all example pipelines."""
-    print("\n" + "=" * 60)
-    print("Auto-Generating Serve APIs")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info("Auto-Generating Serve APIs")
+    logger.info("=" * 60)
 
     # Example 1: Standard single-model pipeline
     generate_apis_for_pipeline(
@@ -82,15 +86,15 @@ def main() -> None:
         serve_config="mlproject/configs/generated/kmeans_then_xgboost_serve.yaml",
     )
 
-    print("=" * 60)
-    print("API Generation Complete!")
-    print("=" * 60)
-    print("\nGenerated files are in: mlproject/serve/generated/")
-    print("\nTo run FastAPI:")
-    print("  python mlproject/serve/generated/standard_train_serve_fastapi.py")
-    print("\nTo run Ray Serve:")
-    print("  python mlproject/serve/generated/standard_train_serve_ray.py")
-    print()
+    logger.info("=" * 60)
+    logger.info("API Generation Complete!")
+    logger.info("=" * 60)
+    logger.info("\nGenerated files are in: mlproject/serve/generated/")
+    logger.info("\nTo run FastAPI:")
+    logger.info("  python mlproject/serve/generated/standard_train_serve_fastapi.py")
+    logger.info("\nTo run Ray Serve:")
+    logger.info("  python mlproject/serve/generated/standard_train_serve_ray.py")
+    logger.info()
 
 
 if __name__ == "__main__":

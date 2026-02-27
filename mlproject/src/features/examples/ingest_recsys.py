@@ -76,7 +76,7 @@ def run_pipeline() -> None:
     store: Any = FeatureStoreFactory.create(store_type="feast", repo_path=repo_name)
     register_recsys_features(store, "user_id", str(data_path.absolute()))
 
-    print(f"RecSys ingestion completed. Offline store path: {data_path}")
+    logger.info(f"RecSys ingestion completed. Offline store path: {data_path}")
 
 
 if __name__ == "__main__":

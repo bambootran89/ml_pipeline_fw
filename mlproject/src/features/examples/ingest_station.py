@@ -118,13 +118,13 @@ def run_pipeline(
             store.materialize(start, end)
 
         logger.info("Station ingestion pipeline completed: %s", data_path)
-        print(f"Station ingestion pipeline finished: {data_path}")
+        logger.info(f"Station ingestion pipeline finished: {data_path}")
 
         return data_path
 
     except Exception as exc:
         logger.error("Pipeline failed: %s", exc)
-        print("Pipeline failed. Check logs.")
+        logger.info("Pipeline failed. Check logs.")
         return None
 
 

@@ -8,6 +8,7 @@ definitions to Feast, and ensures static quality compliance with pylint and mypy
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -18,6 +19,8 @@ from mlproject.src.features.definitions.fraud_reatures import register_fraud_fea
 from mlproject.src.features.factory import FeatureStoreFactory
 from mlproject.src.features.repository import FeastRepositoryManager
 from mlproject.src.features.transformers.fraud_transformers import add_fraud_features
+
+logger = logging.getLogger(__name__)
 
 
 def simulate_raw_data(n: int = 5000) -> pd.DataFrame:
@@ -84,7 +87,7 @@ def run_ingestion() -> None:
         str(data_path.absolute()),
     )
 
-    print(f"Ingested {len(df_features)} rows into {data_path}")
+    logger.info(f"Ingested {len(df_features)} rows into {data_path}")
 
 
 if __name__ == "__main__":

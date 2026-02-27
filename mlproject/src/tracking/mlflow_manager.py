@@ -9,6 +9,7 @@ This module extends MLflow tracking to include:
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 import tempfile
@@ -22,6 +23,8 @@ from mlflow.tracking import MlflowClient
 from omegaconf import DictConfig, OmegaConf
 
 from mlproject.src.tracking.pyfunc_wrapper import ArtifactPyFuncWrapper
+
+logger = logging.getLogger(__name__)
 
 
 class MLflowManager:
@@ -356,7 +359,7 @@ class MLflowManager:
 
         run = self._active_run or mlflow.active_run()
         if run is None:
-            print("[MLflowManager] No active run. Skipping component log.")
+            logger.info("[MLflowManager] No active run. Skipping component log.")
             return None
 
         # Determine logging method for PyFunc
@@ -378,7 +381,9 @@ class MLflowManager:
                 registered_model_name=name,
             )
         except Exception as exc:
-            print(f"[MLflowManager] Warning: Failed to log component '{name}' → {exc}")
+            logger.info(
+                f"[MLflowManager] Warning: Failed to log component '{name}' → {exc}"
+            )
             return None
 
         # Register + set alias latest
@@ -391,7 +396,7 @@ class MLflowManager:
                 reg = mlflow.register_model(f"runs:/{run.info.run_id}/{name}", name)
                 _ = reg.version
             except Exception as reg_exc:
-                print(
+                logger.info(
                     f"[MLflowManager] Warning: Registry registration \
                       failed for '{name}' → {reg_exc}"
                 )
@@ -462,28 +467,32 @@ class MLflowManager:
         try:
             runs = mlflow.search_runs(order_by=["start_time DESC"], max_results=1)
             if runs is None or (hasattr(runs, "empty") and runs.empty):  # type: ignore
-                print(f"[MLflowManager] No runs found. Cannot fallback for '{name}'.")
+                logger.info(
+                    f"[MLflowManager] No runs found. Cannot fallback for '{name}'."
+                )
                 return None
 
             last_run = runs.iloc[0]  # type: ignore
             # Access run_id from pandas Series, not from .info attribute
             run_id = last_run["run_id"]
 
-            print(f"[MLflowManager] Latest run resolved: run_id='{run_id}'.")
+            logger.info(f"[MLflowManager] Latest run resolved: run_id='{run_id}'.")
             artifact_uri = f"runs:/{run_id}/{name}"
 
-            print(
+            logger.info(
                 f"[MLflowManager] Loading latest artifact for '{name}' "
                 f"from '{artifact_uri}'."
             )
 
             loaded = mlflow.pyfunc.load_model(artifact_uri)
-            print(f"[MLflowManager] Successfully loaded '{name}' from latest run.")
+            logger.info(
+                f"[MLflowManager] Successfully loaded '{name}' from latest run."
+            )
             return loaded
 
         except Exception as fb_exc:
-            print(f"[MLflowManager] Latest fallback also failed for '{name}'.")
-            print(f"[MLflowManager] Fallback error: {fb_exc}")
+            logger.info(f"[MLflowManager] Latest fallback also failed for '{name}'.")
+            logger.info(f"[MLflowManager] Fallback error: {fb_exc}")
             return None
 
     def _unwrap(self, loaded: Any, name: str) -> Optional[Any]:
@@ -499,20 +508,20 @@ class MLflowManager:
         """
         model_impl = getattr(loaded, "_model_impl", None)
         if model_impl is None:
-            print(f"[MLflowManager] No _model_impl in '{name}'. Cannot unwrap.")
+            logger.info(f"[MLflowManager] No _model_impl in '{name}'. Cannot unwrap.")
             return None
 
         python_model = getattr(model_impl, "python_model", None)
-        print(
+        logger.info(
             f"[MLflowManager] PyFunc wrapper type detected: "
             f"'{type(python_model).__name__ if python_model else None}'."
         )
 
         if isinstance(python_model, ArtifactPyFuncWrapper):
-            print(f"[MLflowManager] Unwrapping raw artifact from '{name}'.")
+            logger.info(f"[MLflowManager] Unwrapping raw artifact from '{name}'.")
             return python_model.get_raw_artifact()
 
-        print(f"[MLflowManager] '{name}' is not wrapped. Returning None.")
+        logger.info(f"[MLflowManager] '{name}' is not wrapped. Returning None.")
         return None
 
     def load_component(self, name: str, alias: str = "latest") -> Optional[Any]:
@@ -532,7 +541,7 @@ class MLflowManager:
             The unwrapped raw artifact or None if loading or unwrapping fails.
         """
         if not self.enabled:
-            print(f"[MLflowManager] MLflow disabled. Skipping load for '{name}'.")
+            logger.info(f"[MLflowManager] MLflow disabled. Skipping load for '{name}'.")
             return None
 
         alias = alias.lower()
@@ -552,38 +561,40 @@ class MLflowManager:
                     )[0]
                     version = latest_version.version
                     model_uri = f"models:/{name}/{version}"
-                    print(
+                    logger.info(
                         f"[MLflowManager] Resolved 'latest' for '{name}' to "
                         f"version {version}."
                     )
 
                     loaded = mlflow.pyfunc.load_model(model_uri)
-                    print(f"[MLflowManager] Loaded '{name}' (v{version}).")
+                    logger.info(f"[MLflowManager] Loaded '{name}' (v{version}).")
                     return self._unwrap(loaded, name)
                 else:
-                    print(
+                    logger.info(
                         f"[MLflowManager] No versions found for '{name}' in registry."
                     )
             except Exception as exc:
-                print(
+                logger.info(
                     f"[MLflowManager] Failed to resolve 'latest' version for '{name}'."
                 )
-                print(f"[MLflowManager] Error: {exc}")
+                logger.info(f"[MLflowManager] Error: {exc}")
 
         else:
             # Try with specified alias
             model_uri = f"models:/{name}@{alias}"
-            print(f"[MLflowManager] Attempting to load '{name}' using alias '{alias}'.")
+            logger.info(
+                f"[MLflowManager] Attempting to load '{name}' using alias '{alias}'."
+            )
             try:
                 loaded = mlflow.pyfunc.load_model(model_uri)
-                print(f"[MLflowManager] Loaded '{name}' via alias '{alias}'.")
+                logger.info(f"[MLflowManager] Loaded '{name}' via alias '{alias}'.")
                 return self._unwrap(loaded, name)
             except Exception as exc:
-                print(f"[MLflowManager] Alias '{alias}' not found for '{name}'.")
-                print(f"[MLflowManager] Root error: {exc}")
+                logger.info(f"[MLflowManager] Alias '{alias}' not found for '{name}'.")
+                logger.info(f"[MLflowManager] Root error: {exc}")
 
         # Final fallback: try to load from latest run
-        print(f"[MLflowManager] Falling back to latest run for '{name}'...")
+        logger.info(f"[MLflowManager] Falling back to latest run for '{name}'...")
         loaded = self._fallback_latest(name, alias)
         if loaded is None:
             return None

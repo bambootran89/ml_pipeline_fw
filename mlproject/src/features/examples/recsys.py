@@ -51,7 +51,7 @@ def demo_retrieval() -> None:
         ],
     )
 
-    print("--- RecSys Online Prediction Input ---")
+    logger.info("--- RecSys Online Prediction Input ---")
 
     for res in results:
         user_id = res.get("user_id")
@@ -62,7 +62,7 @@ def demo_retrieval() -> None:
             logger.warning("Missing feature values for entity row: %s", res)
             continue
 
-        print(
+        logger.info(
             f"User {user_id} -> Recommend Item: {item_id} "
             f"(Like Ratio: {float(like_ratio):.2f})"
         )

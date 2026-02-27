@@ -8,6 +8,7 @@ This module provides steps for:
 
 from __future__ import annotations
 
+import logging
 import operator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from copy import deepcopy
@@ -18,6 +19,8 @@ from omegaconf import DictConfig, OmegaConf
 from mlproject.src.pipeline.steps.core.base import PipelineStep
 from mlproject.src.pipeline.steps.core.constants import DefaultValues
 from mlproject.src.pipeline.steps.core.factory import StepFactory
+
+logger = logging.getLogger(__name__)
 
 
 class ParallelStep(PipelineStep):
@@ -100,10 +103,10 @@ class ParallelStep(PipelineStep):
         self.validate_dependencies(context)
 
         if not self.branches:
-            print(f"[{self.step_id}] No branches configured, skipping")
+            logger.info(f"[{self.step_id}] No branches configured, skipping")
             return context
 
-        print(
+        logger.info(
             f"[{self.step_id}] Executing {len(self.branches)} branches "
             f"(max_workers={self.max_workers})"
         )
@@ -121,12 +124,12 @@ class ParallelStep(PipelineStep):
                 try:
                     result = future.result()
                     results.append(result)
-                    print(f"[{self.step_id}] Branch '{branch_id}' completed")
+                    logger.info(f"[{self.step_id}] Branch '{branch_id}' completed")
                 except Exception as e:
-                    print(f"[{self.step_id}] Branch '{branch_id}' failed: {e}")
+                    logger.info(f"[{self.step_id}] Branch '{branch_id}' failed: {e}")
                     raise
         merged = self._merge_results(context, results)
-        print(f"[{self.step_id}] All branches completed")
+        logger.info(f"[{self.step_id}] All branches completed")
         return merged
 
     def _merge_results(
@@ -241,7 +244,7 @@ class BranchStep(PipelineStep):
         except TypeError:
             result = False
 
-        print(
+        logger.info(
             f"[{self.step_id}] Condition: {key} {op_name} {expected} "
             f"(actual={actual}) -> {result}"
         )
@@ -261,15 +264,15 @@ class BranchStep(PipelineStep):
         condition_result = self._evaluate_condition(context)
 
         if condition_result and self.if_true:
-            print(f"[{self.step_id}] Executing TRUE branch")
+            logger.info(f"[{self.step_id}] Executing TRUE branch")
             step = StepFactory.create(self.if_true, self.cfg)
             return step.execute(context)
         elif not condition_result and self.if_false:
-            print(f"[{self.step_id}] Executing FALSE branch")
+            logger.info(f"[{self.step_id}] Executing FALSE branch")
             step = StepFactory.create(self.if_false, self.cfg)
             return step.execute(context)
         else:
-            print(f"[{self.step_id}] No branch to execute")
+            logger.info(f"[{self.step_id}] No branch to execute")
             return context
 
 
@@ -360,7 +363,7 @@ class SubPipelineStep(PipelineStep):
             The context updated with results from the sub-pipeline execution.
         """
         self.validate_dependencies(context)
-        print(f"[{self.step_id}] Executing sub-pipeline")
+        logger.info(f"[{self.step_id}] Executing sub-pipeline")
 
         sub_ctx = {} if self.isolated else context.copy()
 
@@ -379,7 +382,7 @@ class SubPipelineStep(PipelineStep):
         for key, value in sub_result.items():
             if key not in context and key not in self.output_keys:
                 merged[key] = value
-        print(f"[{self.step_id}] Sub-pipeline completed")
+        logger.info(f"[{self.step_id}] Sub-pipeline completed")
         return merged
 
 

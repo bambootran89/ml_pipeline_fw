@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
@@ -19,6 +20,8 @@ from mlproject.src.pipeline.steps.core.base import PipelineStep
 from mlproject.src.pipeline.steps.core.constants import ContextKeys
 from mlproject.src.pipeline.steps.core.factory import StepFactory
 from mlproject.src.pipeline.steps.core.utils import ConfigAccessor
+
+logger = logging.getLogger(__name__)
 
 
 def _ensure_numpy(x: Any) -> np.ndarray:
@@ -240,7 +243,7 @@ class EvaluatorStep(PipelineStep):
         composed_feature_names = list(features_df.columns)
 
         # Debug: print shape and columns before building DataModule
-        print(
+        logger.info(
             f"[{self.step_id}] DEBUG - Features shape: {input_df.shape}, "
             f"columns: {list(input_df.columns)[:10]}..."
         )
@@ -251,7 +254,7 @@ class EvaluatorStep(PipelineStep):
         )
 
         # Build DataModule
-        print(
+        logger.info(
             f"[{self.step_id}] Building DataModule with composed features: "
             f"{input_df.shape}"
         )
@@ -281,7 +284,7 @@ class EvaluatorStep(PipelineStep):
         if not self._should_restore(current_columns, expected_features):
             return df
 
-        print(f"[{self.step_id}] Restoring column names...")
+        logger.info(f"[{self.step_id}] Restoring column names...")
 
         # Get base feature indices from metadata
         base_start, base_end = metadata.get("base", (0, len(expected_features)))
@@ -296,13 +299,13 @@ class EvaluatorStep(PipelineStep):
                     current_columns, source, start, end
                 )
                 new_columns.extend(extra_cols)
-                print(f"  {source}: {end - start} columns")
+                logger.info(f"  {source}: {end - start} columns")
 
         if len(new_columns) == len(df.columns):
             df = df.copy()
             df.columns = new_columns
         else:
-            print(
+            logger.info(
                 f"  Warning: Mismatch (expected \
                 {len(new_columns)}, got {len(df.columns)})"
             )
@@ -327,7 +330,7 @@ class EvaluatorStep(PipelineStep):
     ) -> List[str]:
         """Generate names for base features."""
         if expected and len(expected) == n_base:
-            print(f"  Base: restored {len(expected)} feature names")
+            logger.info(f"  Base: restored {len(expected)} feature names")
             return list(expected)
 
         names = []
@@ -421,7 +424,7 @@ class EvaluatorStep(PipelineStep):
                     len(composed_feature_names),
                 )
 
-            print(
+            logger.info(
                 f"[{self.step_id}] Injected composed features into config: "
                 f"{len(original_features)} -> {len(composed_feature_names)} features"
             )
@@ -469,8 +472,8 @@ class EvaluatorStep(PipelineStep):
         metrics : Dict[str, float]
             Evaluation metrics.
         """
-        print(f"[{self.step_id}] Evaluation complete")
-        print(f"  Metrics: {metrics}")
+        logger.info(f"[{self.step_id}] Evaluation complete")
+        logger.info(f"  Metrics: {metrics}")
 
 
 StepFactory.register("evaluator", EvaluatorStep)

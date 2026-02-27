@@ -4,12 +4,15 @@ Feast offline and online feature retrieval demo for fraud detection.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
 from mlproject.src.features.examples.ingest_fraud import run_ingestion
 from mlproject.src.features.factory import FeatureStoreFactory
+
+logger = logging.getLogger(__name__)
 
 
 def demo() -> None:
@@ -41,8 +44,8 @@ def demo() -> None:
         ],
     )
 
-    print("--- Offline Sample ---")
-    print(hist_df)
+    logger.info("--- Offline Sample ---")
+    logger.info(hist_df)
 
     online_feats = store.get_online_features(
         entity_rows=[{"user_id": 5}],
@@ -52,8 +55,8 @@ def demo() -> None:
         ],
     )
 
-    print("\n--- Online Sample ---")
-    print(online_feats)
+    logger.info("\n--- Online Sample ---")
+    logger.info(online_feats)
 
 
 if __name__ == "__main__":

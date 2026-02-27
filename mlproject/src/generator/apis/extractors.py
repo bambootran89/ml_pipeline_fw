@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from ..config import ConfigurablePatternMatcher, GeneratorConfig
@@ -15,6 +16,8 @@ from ..constants import (
     MODEL_PATTERNS,
     STEP_CONSTANTS,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ApiGeneratorExtractorsMixin:
@@ -463,10 +466,10 @@ class ApiGeneratorExtractorsMixin:
         _ = parent_pipeline_id
         additional_keys = self._find_additional_feature_keys(steps)
         if not additional_keys:
-            print("[ApiGenerator] No additional_feature_keys found in config")
+            logger.info("[ApiGenerator] No additional_feature_keys found in config")
             return []
 
-        print(f"[ApiGenerator] Looking for steps that output: {additional_keys}")
+        logger.info(f"[ApiGenerator] Looking for steps that output: {additional_keys}")
 
         # Step 2: Build a map of output_key -> step for all steps (recursive)
         output_map = self._build_output_key_map(steps)
@@ -479,9 +482,9 @@ class ApiGeneratorExtractorsMixin:
                 fg_info = self._build_feature_generator_info_from_key(step, key)
                 if fg_info:
                     generators.append(fg_info)
-                    print(f"  Found: {fg_info['step_id']} -> {key}")
+                    logger.info(f"  Found: {fg_info['step_id']} -> {key}")
             else:
-                print(f"  Warning: No step outputs '{key}'")
+                logger.info(f"  Warning: No step outputs '{key}'")
 
         return generators
 

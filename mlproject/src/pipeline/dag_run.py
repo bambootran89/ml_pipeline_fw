@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import inspect
+import logging
 import os
 import sys
 import uuid
@@ -22,6 +23,9 @@ from mlproject.src.dataio.loaddata import load_csv_data, load_from_feast
 from mlproject.src.generator.orchestrator import ConfigGenerator
 from mlproject.src.pipeline.flexible_pipeline import FlexiblePipeline
 from mlproject.src.utils.config_class import ConfigMerger
+
+logger = logging.getLogger(__name__)
+
 
 # from mlproject.src.generator.orchestrator import ConfigGenerator
 
@@ -63,19 +67,19 @@ def prepare_serving_data(
 
 def _print_separator(title: str) -> None:
     """Print formatted separator with title."""
-    print(f"\n{'=' * 60}")
-    print(f"[RUN] {title}")
-    print(f"{'=' * 60}\n")
+    logger.info(f"\n{'=' * 60}")
+    logger.info(f"[RUN] {title}")
+    logger.info(f"{'=' * 60}\n")
 
 
 def _print_metrics(context: Dict[str, Any], key: str = "evaluate_metrics") -> None:
     """Print metrics from context if available."""
     if key not in context:
         return
-    print(f"[RUN] Metrics ({key}):")
+    logger.info(f"[RUN] Metrics ({key}):")
     for metric, value in context[key].items():
         if isinstance(value, float):
-            print(f"  - {metric}: {value:.4f}")
+            logger.info(f"  - {metric}: {value:.4f}")
 
 
 def run_training(
@@ -91,7 +95,7 @@ def run_training(
     pipeline_path : str, optional
         Path to pipeline structure YAML.
     """
-    print("[RUN] mode='train'")
+    logger.info("[RUN] mode='train'")
 
     merged_cfg = ConfigMerger.merge(experiment_path, pipeline_path, mode="train")
     temp_config = f".temp_merged_train_{uuid.uuid4().hex}.yaml"
@@ -124,7 +128,7 @@ def run_eval(
         Model alias in MLflow Registry.
     """
     _print_separator("Starting EVALUATION pipeline")
-    print(f"[RUN] Model alias: {alias}")
+    logger.info(f"[RUN] Model alias: {alias}")
 
     merged_cfg = ConfigMerger.merge(experiment_path, pipeline_path, mode="eval")
 
@@ -132,10 +136,10 @@ def run_eval(
         step_type = step.get("type", "")
         if step_type == "mlflow_loader":
             step.alias = alias
-            print(f"[CONFIG] Override: mlflow_loader alias='{alias}'")
+            logger.info(f"[CONFIG] Override: mlflow_loader alias='{alias}'")
         elif step_type == "preprocessor" and not step.get("is_train", True):
             step.alias = alias
-            print(f"[CONFIG] Override: preprocessor alias='{alias}'")
+            logger.info(f"[CONFIG] Override: preprocessor alias='{alias}'")
 
     temp_config = f".temp_merged_eval_{uuid.uuid4().hex}.yaml"
     ConfigMerger.save(merged_cfg, temp_config)
@@ -225,40 +229,40 @@ def _preview_predictions(
     pred_keys : list[str]
         All available prediction keys.
     """
-    print(f"[RUN] Generated {len(predictions)} predictions [Key: {main_key}]")
+    logger.info(f"[RUN] Generated {len(predictions)} predictions [Key: {main_key}]")
     if len(pred_keys) > 1:
-        print(f"[RUN] Other available predictions: {pred_keys[1:]}")
+        logger.info(f"[RUN] Other available predictions: {pred_keys[1:]}")
 
     if hasattr(predictions, "shape"):
-        print(f"[RUN] Prediction shape: {predictions.shape}")
+        logger.info(f"[RUN] Prediction shape: {predictions.shape}")
 
     # Prediction preview
     try:
         data = np.asarray(predictions)
 
         # Simple preview: show count and first/last few samples
-        print(f"[RUN] Total predictions: {len(data)} [Key: {main_key}]")
+        logger.info(f"[RUN] Total predictions: {len(data)} [Key: {main_key}]")
         if len(pred_keys) > 1:
-            print(f"[RUN] Other available predictions: {pred_keys[1:]}")
+            logger.info(f"[RUN] Other available predictions: {pred_keys[1:]}")
 
         if hasattr(predictions, "shape"):
-            print(f"[RUN] Prediction shape: {predictions.shape}")
+            logger.info(f"[RUN] Prediction shape: {predictions.shape}")
 
         preview_len = min(5, len(data))
         if preview_len > 0:
-            print(f"[RUN] First {preview_len} values:")
-            print(f"{data[:preview_len]}")
+            logger.info(f"[RUN] First {preview_len} values:")
+            logger.info(f"{data[:preview_len]}")
 
             if len(data) > preview_len:
-                print("[RUN] Last 5 values:")
-                print(f"{data[-5:]}")
+                logger.info("[RUN] Last 5 values:")
+                logger.info(f"{data[-5:]}")
         else:
-            print("[RUN] WARNING: Prediction array is empty!")
+            logger.info("[RUN] WARNING: Prediction array is empty!")
 
     except Exception as e:
-        print(f"[DEBUG] Preview logic failed: {e}")
+        logger.debug(f"[DEBUG] Preview logic failed: {e}")
         preview_len = min(10, len(predictions))
-        print(f"[RUN] First {preview_len}: {predictions[:preview_len]}")
+        logger.info(f"[RUN] First {preview_len}: {predictions[:preview_len]}")
 
 
 def run_serve(
@@ -294,13 +298,13 @@ def run_serve(
         If no predictions found.
     """
     _print_separator("Starting SERVING pipeline")
-    print(f"[RUN] Model alias: {alias}")
+    logger.info(f"[RUN] Model alias: {alias}")
 
     if input_path:
-        print(f"[RUN] Data source: CSV ({input_path})")
+        logger.info(f"[RUN] Data source: CSV ({input_path})")
     else:
-        print("[RUN] Data source: Feast Feature Store")
-        print(f"[RUN] Time point: {time_point}")
+        logger.info("[RUN] Data source: Feast Feature Store")
+        logger.info(f"[RUN] Time point: {time_point}")
 
     merged_cfg = ConfigMerger.merge(experiment_path, pipeline_path, mode="serve")
 
@@ -320,7 +324,7 @@ def run_serve(
             time_point=time_point,
         )
 
-        print(f"[SERVE] Pre-initialized context: {len(initial_context)} keys")
+        logger.info(f"[SERVE] Pre-initialized context: {len(initial_context)} keys")
         context = _run_pipeline_with_context(pipeline, initial_context)
 
         _print_separator("Serving COMPLETE")
@@ -359,7 +363,7 @@ def run_tune(
     """
     _print_separator("Starting HYPERPARAMETER TUNING pipeline")
     if n_trials:
-        print(f"[RUN] Trials override: {n_trials}")
+        logger.info(f"[RUN] Trials override: {n_trials}")
 
     merged_cfg = ConfigMerger.merge(experiment_path, pipeline_path, mode="tune")
 
@@ -371,7 +375,7 @@ def run_tune(
         for step in merged_cfg.pipeline.steps:
             if step.get("type") == "tuner":
                 step.n_trials = n_trials
-                print(f"[CONFIG] Override: n_trials={n_trials}")
+                logger.info(f"[CONFIG] Override: n_trials={n_trials}")
                 break
 
     temp_config = ".temp_merged_tune.yaml"
@@ -385,14 +389,14 @@ def run_tune(
 
         for key in context:
             if "_best_params" in key:
-                print(f"[RUN] Best parameters ({key}):")
+                logger.info(f"[RUN] Best parameters ({key}):")
                 for param, value in context[key].items():
-                    print(f"  - {param}: {value}")
+                    logger.info(f"  - {param}: {value}")
 
         for key in context:
             if "_study" in key:
                 study = context[key]
-                print(f"[RUN] Best metric value: {study.best_value:.4f}")
+                logger.info(f"[RUN] Best metric value: {study.best_value:.4f}")
                 break
 
     finally:
@@ -422,28 +426,28 @@ def run_generate_configs(
         Path to experiment config to infer data type.
     """
     _print_separator("GENERATING CONFIGS")
-    print(f"[RUN] Source: {train_config}")
+    logger.info(f"[RUN] Source: {train_config}")
     if experiment_config:
-        print(f"[RUN] Experiment info: {experiment_config}")
-    print(f"[RUN] Output: {output_dir}")
+        logger.info(f"[RUN] Experiment info: {experiment_config}")
+    logger.info(f"[RUN] Output: {output_dir}")
 
     generator = ConfigGenerator(train_config, experiment_config_path=experiment_config)
     base_name = Path(train_config).stem
 
     if config_type == "all":
         paths = generator.generate_all(output_dir, alias, include_tune=True)
-        print("\nGenerated configs:")
-        print(f"  - Eval:  {paths['eval']}")
-        print(f"  - Serve: {paths['serve']}")
-        print(f"  - Tune: {paths['tune']}")
+        logger.info("\nGenerated configs:")
+        logger.info(f"  - Eval:  {paths['eval']}")
+        logger.info(f"  - Serve: {paths['serve']}")
+        logger.info(f"  - Tune: {paths['tune']}")
     elif config_type == "eval":
         out_path = str(Path(output_dir) / f"{base_name}_eval.yaml")
         generator.generate_eval_config(alias=alias, output_path=out_path)
-        print(f"Generated: {out_path}")
+        logger.info(f"Generated: {out_path}")
     else:
         out_path = str(Path(output_dir) / f"{base_name}_serve.yaml")
         generator.generate_serve_config(alias=alias, output_path=out_path)
-        print(f"Generated: {out_path}")
+        logger.info(f"Generated: {out_path}")
 
 
 def _setup_train_parser(subparsers: Any) -> None:
@@ -555,7 +559,7 @@ def main() -> None:
             parser.print_help()
             sys.exit(1)
     except Exception as exc:
-        print(f"\n[ERROR] Pipeline failed: {exc}", file=sys.stderr)
+        logger.error(f"\n[ERROR] Pipeline failed: {exc}")
         raise
 
 

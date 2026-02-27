@@ -4,6 +4,7 @@ Discovery-based LoggerStep for systematic MLflow tracking.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict
 
 from mlproject.src.pipeline.steps.core.base import BasePipelineStep
@@ -11,6 +12,8 @@ from mlproject.src.pipeline.steps.core.constants import ContextKeys, DefaultValu
 from mlproject.src.pipeline.steps.core.factory import StepFactory
 from mlproject.src.tracking.mlflow_manager import MLflowManager
 from mlproject.src.utils.func_utils import flatten_metrics_for_mlflow
+
+logger = logging.getLogger(__name__)
 
 
 class LoggerStep(BasePipelineStep):
@@ -34,7 +37,7 @@ class LoggerStep(BasePipelineStep):
             # 1. Automated Discovery Logging
             registry = context.get(ContextKeys.ARTIFACT_REGISTRY, {})
             for step_id, artifact in registry.items():
-                print(f"[LoggerStep] Auto-logging component from step: {step_id}")
+                logger.info(f"[LoggerStep] Auto-logging component from step: {step_id}")
 
                 # Each artifact is wrapped via ArtifactPyFuncWrapper automatically
                 self.mlflow_manager.log_component(
@@ -60,7 +63,7 @@ class LoggerStep(BasePipelineStep):
                             }
                         )
 
-        print(f"[{self.step_id}] Finished systematic logging to MLflow.")
+        logger.info(f"[{self.step_id}] Finished systematic logging to MLflow.")
         return context
 
 

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pandas as pd
 from omegaconf import DictConfig
 
 from mlproject.src.features.facade import FeatureStoreFacade
+
+logger = logging.getLogger(__name__)
 
 
 def load_from_feast(cfg: DictConfig, time_point: str) -> pd.DataFrame:
@@ -50,12 +53,12 @@ def load_csv_data(input_path: str) -> pd.DataFrame:
     if not input_file.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    print(f"[SERVE] Loading data from CSV: {input_path}")
+    logger.info(f"[SERVE] Loading data from CSV: {input_path}")
     df = pd.read_csv(input_path)
 
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"])
         df = df.set_index("date")
 
-    print(f"[SERVE] Loaded CSV data shape: {df.shape}")
+    logger.info(f"[SERVE] Loaded CSV data shape: {df.shape}")
     return df

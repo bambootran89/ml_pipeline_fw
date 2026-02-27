@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from .extractors import ApiGeneratorExtractorsMixin
 from .types import DataConfig, GenerationContext
+
+logger = logging.getLogger(__name__)
 
 
 class ApiGeneratorFastAPIMixin(ApiGeneratorExtractorsMixin):
@@ -207,13 +210,13 @@ class ServeService:
         if ctx.data_config.is_feast:
             parts.append(
                 """
-            print(f"[ModelService] Initializing Feast Facade...")
+            logger.info(f"[ModelService] Initializing Feast Facade...")
             try:
                 self.feature_store = FeatureStoreFacade(
                     self.cfg, mode="online"
                 )
             except Exception as e:
-                print(f"[WARNING] Feast initialization failed: {e}")
+                logger.warning(f"[WARNING] Feast initialization failed: {e}")
                 self.feature_store = None
 """
             )
@@ -224,7 +227,7 @@ class ServeService:
         if preprocessor_artifact:
             parts.append(
                 f"""
-            print(
+            logger.info(
                 f"[ModelService] Loading preprocessor: "
                 f"{preprocessor_artifact} (alias: {ctx.alias})..."
             )
@@ -241,7 +244,7 @@ class ServeService:
             step_id = ctx.load_map.get(model_key, "model")
             parts.append(
                 f"""
-            print(
+            logger.info(
                 f"[ModelService] Loading model: {model_key} from "
                 f"{step_id} (alias: {ctx.alias})..."
             )
@@ -258,7 +261,7 @@ class ServeService:
             parts.append(
                 f"""
             # Load feature generator: {fg.step_id}
-            print(
+            logger.info(
                 f"[ModelService] Loading feature generator: "
                 f"{fg.artifact_name} (alias: {ctx.alias})..."
             )
@@ -335,7 +338,7 @@ class ServeService:
             raise RuntimeError("Feast not initialized")
 
         # Use Facade to load features (handles windowing and prefixes)
-        print(f"[ModelService] Fetching features for entities: {entities}")
+        logger.info(f"[ModelService] Fetching features for entities: {entities}")
         df = self.feature_store.load_features(
             time_point=time_point,
             entity_ids=entities
@@ -355,7 +358,7 @@ class ServeService:
         if not self.feature_generators:
             return additional_features
 
-        print(
+        logger.info(
             f"[ModelService] Generating additional features from "
             f"{len(self.feature_generators)} generators..."
         )
@@ -380,7 +383,7 @@ class ServeService:
                     )
 
                 if inference_fn is None:
-                    print(
+                    logger.info(
                         f"  Warning: {output_key} has no "
                         f"{method}/transform/predict, skipping"
                     )
@@ -399,10 +402,10 @@ class ServeService:
                     if hasattr(result, "shape")
                     else len(result)
                 )
-                print(f"  + {output_key} ({generator_type}): {result_shape}")
+                logger.info(f"  + {output_key} ({generator_type}): {result_shape}")
 
             except Exception as e:
-                print(f"  Warning: Failed to generate {output_key}: {e}")
+                logger.info(f"  Warning: Failed to generate {output_key}: {e}")
                 continue
 
         return additional_features
@@ -427,7 +430,7 @@ class ServeService:
         )
         n_samples = len(composed)
 
-        print(f"[ModelService] Composing features: base {composed.shape}")
+        logger.info(f"[ModelService] Composing features: base {composed.shape}")
 
         for key, features in additional_features.items():
             if isinstance(features, np.ndarray):
@@ -458,7 +461,7 @@ class ServeService:
 
             feat_df.index = composed.index
             composed = pd.concat([composed, feat_df], axis=1)
-            print(f"  + {key}: {feat_df.shape} -> Total: {composed.shape}")
+            logger.info(f"  + {key}: {feat_df.shape} -> Total: {composed.shape}")
 
         return composed
 """

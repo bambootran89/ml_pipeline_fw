@@ -68,8 +68,8 @@ def run_retrieval_demo() -> None:
         start_date=start,
         end_date=end,
     )
-    print("\n--- Training Sequence Result ---")
-    print(df_range.head())
+    logger.info("\n--- Training Sequence Result ---")
+    logger.info(df_range.head())
 
     _profile_df(df_range, "range")
 
@@ -78,8 +78,8 @@ def run_retrieval_demo() -> None:
         features=["station_stats:production"],
         n_points=5,
     )
-    print("\n--- Latest N Points Result ---")
-    print(df_latest)
+    logger.info("\n--- Latest N Points Result ---")
+    logger.info(df_latest)
 
     _profile_df(df_latest, "latest")
 

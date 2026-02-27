@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -10,6 +11,8 @@ import pandas as pd
 from mlproject.src.pipeline.steps.core.base import PipelineStep
 from mlproject.src.pipeline.steps.core.factory import StepFactory
 from mlproject.src.pipeline.steps.core.utils import ConfigAccessor, WindowBuilder
+
+logger = logging.getLogger(__name__)
 
 
 class InferenceStep(PipelineStep):
@@ -105,7 +108,7 @@ class InferenceStep(PipelineStep):
         x = self._prepare_model_input(features_df)
 
         # Run inference
-        print(f"[{self.step_id}] Running inference on shape {x.shape}")
+        logger.info(f"[{self.step_id}] Running inference on shape {x.shape}")
         predictions = model.predict(x)
 
         # Store output - always store to predictions
@@ -116,7 +119,7 @@ class InferenceStep(PipelineStep):
         # serve mode
         if "features" in self.output_keys:
             self.set_output(context, "features", predictions)
-            print(
+            logger.info(
                 f"[{self.step_id}] Also stored to features key: "
                 f"{self.output_keys['features']}"
             )
@@ -127,7 +130,7 @@ class InferenceStep(PipelineStep):
                 predictions, features_df if self.include_inputs else None
             )
 
-        print(
+        logger.info(
             f"[{self.step_id}] Inference complete. "
             f"Output shape: {predictions.shape}"
         )
@@ -204,7 +207,7 @@ class InferenceStep(PipelineStep):
             df = pd.concat([inputs.reset_index(drop=True), df], axis=1)
 
         df.to_csv(self.save_path, index=False)
-        print(f"[{self.step_id}] Saved predictions to {self.save_path}")
+        logger.info(f"[{self.step_id}] Saved predictions to {self.save_path}")
 
 
 StepFactory.register("inference", InferenceStep)

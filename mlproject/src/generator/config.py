@@ -7,6 +7,7 @@ default constants.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,6 +29,8 @@ from .constants import (
     ModelTypePatterns,
     StepConstants,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -58,7 +61,7 @@ class GeneratorConfig:
             GeneratorConfig instance with loaded values.
         """
         if not Path(config_path).exists():
-            print(
+            logger.info(
                 f"[GeneratorConfig] Config file not found: {config_path}, "
                 f"using defaults"
             )
@@ -150,7 +153,7 @@ class GeneratorConfig:
         with open(output_path, "w", encoding="utf-8") as f:
             OmegaConf.save(config=cfg, f=f)
 
-        print(f"[GeneratorConfig] Saved configuration to: {output_path}")
+        logger.info(f"[GeneratorConfig] Saved configuration to: {output_path}")
 
     @staticmethod
     def _dataclass_to_dict(instance: Any) -> Dict[str, Any]:

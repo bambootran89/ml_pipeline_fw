@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
@@ -14,6 +15,8 @@ from mlproject.src.pipeline.steps.core.base import BasePipelineStep
 from mlproject.src.pipeline.steps.core.constants import ContextKeys
 from mlproject.src.pipeline.steps.core.factory import StepFactory
 from mlproject.src.pipeline.steps.core.utils import ConfigAccessor, SampleAligner
+
+logger = logging.getLogger(__name__)
 
 
 class DataModuleStep(BasePipelineStep):
@@ -111,7 +114,7 @@ class DataModuleStep(BasePipelineStep):
         )
 
         # Build DataModule
-        print(f"[{self.step_id}] Building DataModule with shape {input_df.shape}")
+        logger.info(f"[{self.step_id}] Building DataModule with shape {input_df.shape}")
         dm = DataModuleFactory.build(cfg_for_dm, input_df)
         dm.setup()
 
@@ -170,13 +173,13 @@ class DataModuleStep(BasePipelineStep):
         composed = base_features.copy()
         len(composed)
 
-        print(f"[{self.step_id}] Composing features:")
-        print(f"  Base: {composed.shape}")
+        logger.info(f"[{self.step_id}] Composing features:")
+        logger.info(f"  Base: {composed.shape}")
 
         for key in self.additional_feature_keys:
             additional = context.get(key)
             if additional is None:
-                print(f"  Warning: Feature key '{key}' not found, skipping")
+                logger.info(f"  Warning: Feature key '{key}' not found, skipping")
                 continue
 
             # Convert to DataFrame
@@ -213,7 +216,7 @@ class DataModuleStep(BasePipelineStep):
 
             # Concatenate
             composed = pd.concat([composed, additional], axis=1)
-            print(f"  + {key}: {additional.shape} -> Total: {composed.shape}")
+            logger.info(f"  + {key}: {additional.shape} -> Total: {composed.shape}")
 
         # Return composed DataFrame and all feature column names
         composed_feature_names = list(composed.columns)
@@ -266,7 +269,7 @@ class DataModuleStep(BasePipelineStep):
                     len(composed_feature_names),
                 )
 
-            print(
+            logger.info(
                 f"[{self.step_id}] Injected composed features into config: "
                 f"{len(original_features)} -> {len(composed_feature_names)} features"
             )
@@ -320,7 +323,7 @@ class DataModuleStep(BasePipelineStep):
         """
         model = context.get("model")
         if model is None:
-            print(
+            logger.info(
                 f"[{self.step_id}] Warning: output_as_feature=True "
                 "but no model found"
             )
@@ -337,7 +340,9 @@ class DataModuleStep(BasePipelineStep):
         features = np.asarray(preds, dtype=float)
 
         self.set_output(context, "features", features)
-        print(f"[{self.step_id}] Generated features from model: " f"{features.shape}")
+        logger.info(
+            f"[{self.step_id}] Generated features from model: " f"{features.shape}"
+        )
 
 
 StepFactory.register("datamodule", DataModuleStep)

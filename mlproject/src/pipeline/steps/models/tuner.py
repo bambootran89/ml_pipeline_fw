@@ -7,6 +7,7 @@ This implementation follows the clean separation pattern:
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, Optional
 
 from mlproject.src.datamodule.splitters.base import BaseSplitter
@@ -17,6 +18,8 @@ from mlproject.src.pipeline.steps.core.factory import StepFactory
 from mlproject.src.pipeline.steps.core.utils import ConfigAccessor
 from mlproject.src.tracking.mlflow_manager import MLflowManager
 from mlproject.src.tuning.optuna import OptunaTuner
+
+logger = logging.getLogger(__name__)
 
 
 class TunerStep(BasePipelineStep):
@@ -335,7 +338,7 @@ class TunerStep(BasePipelineStep):
         with mlflow_manager.start_run(
             run_name=run_name,
         ):
-            print(f"\n[MLflow] Started parent run: {run_name}")
+            logger.info(f"\n[MLflow] Started parent run: {run_name}")
 
             tuner = OptunaTuner(
                 cfg=self.cfg,
@@ -347,22 +350,22 @@ class TunerStep(BasePipelineStep):
                 model_type=model_type,
             )
 
-            print(f"\n[{self.step_id}] Running optimization...")
+            logger.info(f"\n[{self.step_id}] Running optimization...")
             result = tuner.tune(
                 n_trials=tuning_cfg["n_trials"],
                 timeout=tuning_cfg["timeout"],
             )
 
             mlflow_manager.log_metadata(params=result["best_params"])
-            print("\n[MLflow] Logged best params to parent run")
+            logger.info("\n[MLflow] Logged best params to parent run")
 
             return result
 
     def _print_tuning_header(self) -> None:
         """Print tuning header."""
-        print(f"\n{'=' * 60}")
-        print(f"[{self.step_id}] HYPERPARAMETER TUNING")
-        print(f"{'=' * 60}\n")
+        logger.info(f"\n{'=' * 60}")
+        logger.info(f"[{self.step_id}] HYPERPARAMETER TUNING")
+        logger.info(f"{'=' * 60}\n")
 
     def _build_splitter(self) -> BaseSplitter:
         """Build cross-validation splitter."""
@@ -393,15 +396,15 @@ class TunerStep(BasePipelineStep):
         model_type: str,
     ) -> None:
         """Print tuning configuration."""
-        print(f"[{self.step_id}] Configuration:")
-        print(f"  - Trials: {tuning_cfg['n_trials']}")
-        print(
+        logger.info(f"[{self.step_id}] Configuration:")
+        logger.info(f"  - Trials: {tuning_cfg['n_trials']}")
+        logger.info(
             f"  - Metric: {tuning_cfg['metric_name']}" f" ({tuning_cfg['direction']})"
         )
-        print(f"  - CV folds: {tuning_cfg['n_splits']}")
+        logger.info(f"  - CV folds: {tuning_cfg['n_splits']}")
 
         if self.target_model_id:
-            print(
+            logger.info(
                 f"  - Target model: {self.target_model_id} "
                 f"({model_name}/{model_type})"
             )
@@ -422,14 +425,14 @@ class TunerStep(BasePipelineStep):
         result: Dict[str, Any],
     ) -> None:
         """Print tuning summary."""
-        print(f"\n{'=' * 60}")
-        print(f"[{self.step_id}] TUNING COMPLETE")
-        print(f"{'=' * 60}")
-        print(f"  Best {metric_name}: {result['best_value']:.6f}")
-        print("\n  Best parameters:")
+        logger.info(f"\n{'=' * 60}")
+        logger.info(f"[{self.step_id}] TUNING COMPLETE")
+        logger.info(f"{'=' * 60}")
+        logger.info(f"  Best {metric_name}: {result['best_value']:.6f}")
+        logger.info("\n  Best parameters:")
         for param, value in result["best_params"].items():
-            print(f"    - {param}: {value}")
-        print(f"\n{'=' * 60}\n")
+            logger.info(f"    - {param}: {value}")
+        logger.info(f"\n{'=' * 60}\n")
 
 
 # Register step type

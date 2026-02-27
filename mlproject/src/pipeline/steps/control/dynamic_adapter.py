@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import logging
 from typing import Any, Dict, Optional
 
 from omegaconf import DictConfig, OmegaConf
 
 from mlproject.src.pipeline.steps.core.base import BasePipelineStep
 from mlproject.src.pipeline.steps.core.factory import StepFactory
+
+logger = logging.getLogger(__name__)
 
 
 class DynamicAdapterStep(BasePipelineStep):
@@ -72,7 +75,7 @@ class DynamicAdapterStep(BasePipelineStep):
         if instance is None:
             instance = self._instantiate()
         else:
-            print(f"[{self.step_id}] Reusing instance from context.")
+            logger.info(f"[{self.step_id}] Reusing instance from context.")
 
         # Collect wired inputs
         inputs_map: dict[str, str] = self.wiring.get("inputs", {})
@@ -99,7 +102,7 @@ class DynamicAdapterStep(BasePipelineStep):
                 aligned_kwargs.update({str(k): v for k, v in static_opts.items()})
 
         # Call method
-        print(f"[{self.step_id}] Calling method '{self.run_method}'.")
+        logger.info(f"[{self.step_id}] Calling method '{self.run_method}'.")
         result = method(**aligned_kwargs)
 
         # Wire outputs back to context

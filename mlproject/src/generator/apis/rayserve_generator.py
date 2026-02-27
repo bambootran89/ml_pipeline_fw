@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from .extractors import ApiGeneratorExtractorsMixin
 from .types import GenerationContext
+
+logger = logging.getLogger(__name__)
 
 
 class ApiGeneratorRayServeMixin(ApiGeneratorExtractorsMixin):
@@ -178,7 +181,7 @@ if __name__ == "__main__":
         """Generate ModelService methods."""
         model_loads = "\n".join(
             [
-                f"""        print(
+                f"""        logger.info(
             f"[ModelService] Loading model: {key} "
             f"(alias: {ctx.alias})..."
         )
@@ -196,7 +199,7 @@ if __name__ == "__main__":
         for generator in ctx.data_config.feature_generators:
             feature_generator_loads += f"""
         # Load feature generator: {generator.step_id}
-        print(
+        logger.info(
             f"[ModelService] Loading feature generator: "
             f"{generator.artifact_name} (alias: {ctx.alias})..."
         )
@@ -347,7 +350,7 @@ class ModelService:
     FEATURE_GENERATORS = {self._generate_feature_generators_config(ctx)}
 
     def __init__(self, config_path: str) -> None:
-        print("[ModelService] Initializing...")
+        logger.info("[ModelService] Initializing...")
         self.cfg = ConfigLoader.load(config_path)
         self.mlflow_manager = MLflowManager(self.cfg)
         self.models = {{}}
@@ -359,13 +362,13 @@ class ModelService:
 
     def _check_feast(self) -> None:
         if "{ctx.data_config.path}".startswith("feast://"):
-            print(f"[ModelService] Initializing Feast Facade...")
+            logger.info(f"[ModelService] Initializing Feast Facade...")
             try:
                 self.feature_store = FeatureStoreFacade(
                     self.cfg, mode="online"
                 )
             except Exception as e:
-                print(f"[WARNING] Feast initialization failed: {{e}}")
+                logger.warning(f"[WARNING] Feast initialization failed: {{e}}")
                 self.feature_store = None
 
     def get_online_dataset(
@@ -388,7 +391,7 @@ class ModelService:
 {model_loads}
 {feature_generator_loads}
         self.ready = True
-        print("[ModelService] Ready")
+        logger.info("[ModelService] Ready")
 
     def check_health(self) -> str:
         if not self.ready:
@@ -444,7 +447,7 @@ class ModelService:
         if not self.feature_generators:
             return additional_features
 
-        print(
+        logger.info(
             f"[ModelService] Generating additional features from "
             f"{{len(self.feature_generators)}} generators..."
         )
@@ -469,7 +472,7 @@ class ModelService:
                     )
 
                 if inference_fn is None:
-                    print(f"  Warning: {{output_key}} has no inference method")
+                    logger.info(f"  Warning: {{output_key}} has no inference method")
                     continue
 
                 if (fg_type != "dynamic_adapter") and self.DATA_TYPE != "tabular":
@@ -483,10 +486,10 @@ class ModelService:
                     if hasattr(result, "shape")
                     else len(result)
                 )
-                print(f"  + {{output_key}} ({{fg_type}}): {{result_shape}}")
+                logger.info(f"  + {{output_key}} ({{fg_type}}): {{result_shape}}")
 
             except Exception as e:
-                print(f"  Warning: Failed to generate {{output_key}}: {{e}}")
+                logger.info(f"  Warning: Failed to generate {{output_key}}: {{e}}")
                 continue
 
         return additional_features
@@ -507,7 +510,7 @@ class ModelService:
         )
         n_samples = len(composed)
 
-        print(f"[ModelService] Composing features: base {{composed.shape}}")
+        logger.info(f"[ModelService] Composing features: base {{composed.shape}}")
 
         for key, features in additional_features.items():
             if isinstance(features, np.ndarray):
@@ -541,7 +544,7 @@ class ModelService:
 
             feat_df.index = composed.index
             composed = pd.concat([composed, feat_df], axis=1)
-            print(f"  + {{key}}: {{feat_df.shape}} -> Total: {{composed.shape}}")
+            logger.info(f"  + {{key}}: {{feat_df.shape}} -> Total: {{composed.shape}}")
 
         return composed
 
@@ -581,7 +584,7 @@ class ModelService:
         prep_load = ""
         if preprocessor_artifact:
             prep_load = (
-                f"""        print(
+                f"""        logger.info(
             f"[PreprocessService] Loading preprocessor: "
             f"{preprocessor_artifact} (alias: {ctx.alias})..."
         )\n"""
@@ -600,7 +603,7 @@ class ModelService:
 )
 class PreprocessService:
     def __init__(self, config_path: str) -> None:
-        print("[PreprocessService] Initializing...")
+        logger.info("[PreprocessService] Initializing...")
         self.cfg = ConfigLoader.load(config_path)
         self.mlflow_manager = MLflowManager(self.cfg)
         self.preprocessor = None

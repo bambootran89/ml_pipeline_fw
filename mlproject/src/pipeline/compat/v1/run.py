@@ -83,7 +83,7 @@ def run_serve(
 
     if input_path:
         logger.info("[SERVING] CSV mode active (input='%s')", input_path)
-        print(f"[SERVING] Loading data from CSV: {input_path}")
+        logger.info(f"[SERVING] Loading data from CSV: {input_path}")
 
         df = pd.read_csv(input_path)
 
@@ -101,7 +101,7 @@ def run_serve(
     else:
         uri = pipeline.cfg.data.get("path", "")
         logger.info("[SERVING] Feast mode active (config_uri='%s')", uri)
-        print("[SERVING] No CSV provided, loading latest features from Feast")
+        logger.info("[SERVING] No CSV provided, loading latest features from Feast")
 
         if not uri.startswith("feast://"):
             raise ValueError(
@@ -110,15 +110,15 @@ def run_serve(
 
         preds = pipeline.run_exp(data=None)
 
-    print("\n" + "=" * 70)
-    print("SERVING COMPLETED")
-    print("=" * 70)
-    print(f"Prediction output type: {type(preds)}")
+    logger.info("\n" + "=" * 70)
+    logger.info("SERVING COMPLETED")
+    logger.info("=" * 70)
+    logger.info(f"Prediction output type: {type(preds)}")
 
     if hasattr(preds, "shape"):
-        print(f"Prediction shape: {preds.shape}")
+        logger.info(f"Prediction shape: {preds.shape}")
 
-    print("=" * 70)
+    logger.info("=" * 70)
     logger.info("[SERVING] Inference completed successfully")
 
     return preds

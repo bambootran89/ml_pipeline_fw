@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -16,6 +17,8 @@ from mlproject.src.pipeline.steps.core.utils import (
     SampleAligner,
     WindowBuilder,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class FeatureInferenceStep(PipelineStep):
@@ -131,13 +134,13 @@ class FeatureInferenceStep(PipelineStep):
         composed = base_df.copy()
         n_samples = len(composed)
 
-        print(f"[{self.step_id}] Composing features for inference:")
-        print(f"  Base: {composed.shape}")
+        logger.info(f"[{self.step_id}] Composing features for inference:")
+        logger.info(f"  Base: {composed.shape}")
 
         for key in self.additional_feature_keys:
             additional = context.get(key)
             if additional is None:
-                print(f"  Warning: Feature key '{key}' not found, skipping")
+                logger.info(f"  Warning: Feature key '{key}' not found, skipping")
                 continue
 
             # Convert to DataFrame
@@ -159,7 +162,7 @@ class FeatureInferenceStep(PipelineStep):
 
             # Concatenate
             composed = pd.concat([composed, additional], axis=1)
-            print(f"  + {key}: {additional.shape} -> Total: {composed.shape}")
+            logger.info(f"  + {key}: {additional.shape} -> Total: {composed.shape}")
 
         return composed
 
@@ -229,7 +232,7 @@ class FeatureInferenceStep(PipelineStep):
             expected_windowed = input_features * input_chunk
 
             if expected_features == expected_windowed:
-                print(
+                logger.info(
                     f"  Auto-detected: model expects {expected_features} features "
                     f"(windowed), input has {input_features}"
                 )
@@ -253,7 +256,7 @@ class FeatureInferenceStep(PipelineStep):
 
         # Use WindowBuilder for windowing
         x_windows = WindowBuilder.create_windows(x, input_chunk, output_chunk)
-        print(f"  Windowed shape: {x_windows.shape}")
+        logger.info(f"  Windowed shape: {x_windows.shape}")
 
         model_type_value = getattr(model, "model_type", None)
         is_dl_model = (
@@ -285,7 +288,7 @@ class FeatureInferenceStep(PipelineStep):
         method_name = self.inference_method
         if not hasattr(model, method_name):
             if method_name == "predict" and hasattr(model, "transform"):
-                print(
+                logger.info(
                     f"[{self.step_id}] Model missing 'predict', "
                     "falling back to 'transform'"
                 )
@@ -296,12 +299,12 @@ class FeatureInferenceStep(PipelineStep):
                     f"has no method '{method_name}'"
                 )
 
-        print(
+        logger.info(
             f"[{self.step_id}] Generating features from "
             f"'{self.source_model_key}' using '{method_name}'"
         )
-        print(f"  Input shape: {x.shape}")
-        print(
+        logger.info(f"  Input shape: {x.shape}")
+        logger.info(
             f"  data_type: {data_type}, config apply_windowing: {self.apply_windowing}"
         )
 
@@ -309,7 +312,7 @@ class FeatureInferenceStep(PipelineStep):
         # This checks the model's expected feature count vs input feature count
         # to handle cases where config flag might be incorrect
         should_window = self._should_apply_windowing_runtime(model, x, data_type)
-        print(f"  runtime apply_windowing: {should_window}")
+        logger.info(f"  runtime apply_windowing: {should_window}")
 
         if DataTypes.is_timeseries(data_type) and should_window:
             features = self._run_windowed_inference(model, x, method_name)
@@ -319,7 +322,7 @@ class FeatureInferenceStep(PipelineStep):
 
         # Store in context
         context[self.output_key] = features
-        print(
+        logger.info(
             f"[{self.step_id}] Stored features in '{self.output_key}' "
             f"(shape: {features.shape})"
         )

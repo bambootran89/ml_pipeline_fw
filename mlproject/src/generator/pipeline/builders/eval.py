@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from omegaconf import DictConfig, OmegaConf
@@ -12,6 +13,8 @@ from ...constants import CONTEXT_KEYS, STEP_CONSTANTS
 from ..feature_parser import EngineeredFeature, FeaturePipeline
 from .base import BasePipelineBuilder
 from .loader import LoaderBuilder
+
+logger = logging.getLogger(__name__)
 
 
 class EvalBuilder(BasePipelineBuilder):
@@ -168,7 +171,7 @@ class EvalBuilder(BasePipelineBuilder):
             step = self._create_feature_inference_step(feat, init_id)
             steps.append(step)
 
-            print(
+            logger.info(
                 f"[EvalBuilder] Added feature inference: "
                 f"{step['id']} -> {feat.output_key}"
             )
@@ -573,7 +576,7 @@ class EvalBuilder(BasePipelineBuilder):
         additional_keys = self.extract_additional_feature_keys(producer)
         if additional_keys:
             config["additional_feature_keys"] = additional_keys
-            print(
+            logger.info(
                 f"[EvalBuilder] Propagating additional_feature_keys to {eval_id}: "
                 f"{additional_keys}"
             )

@@ -10,6 +10,7 @@ thông qua YAML configuration mà không cần thay đổi step code.
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -21,6 +22,8 @@ from mlproject.src.pipeline.steps.features.composer import (
     FeatureComposer,
     FeatureExtractor,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class BasePipelineStep(ABC):
@@ -519,10 +522,10 @@ class PipelineStep(BasePipelineStep):
         metadata : Dict[str, Tuple[int, int]]
             Feature source metadata.
         """
-        print(f"[{self.step_id}] Feature composition:")
-        print(f"  Total shape: {composed_df.shape}")
-        print("  Sources:")
+        logger.info(f"[{self.step_id}] Feature composition:")
+        logger.info(f"  Total shape: {composed_df.shape}")
+        logger.info("  Sources:")
 
         for source, (start, end) in metadata.items():
             n_cols = end - start
-            print(f"    - {source}: {n_cols} features [cols {start}:{end}]")
+            logger.info(f"    - {source}: {n_cols} features [cols {start}:{end}]")
