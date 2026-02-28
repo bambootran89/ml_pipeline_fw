@@ -115,6 +115,9 @@ from mlproject.src.utils.config_class import ConfigLoader
 from mlproject.src.features.facade import FeatureStoreFacade
 from mlproject.src.generator.constants import API_DEFAULTS, CONTEXT_KEYS
 
+import logging
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="ML Pipeline API (Ray Serve)")
 """
 

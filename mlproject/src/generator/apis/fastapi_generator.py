@@ -125,6 +125,9 @@ from mlproject.src.utils.config_class import ConfigLoader
 from mlproject.src.features.facade import FeatureStoreFacade
 from mlproject.src.generator.constants import API_DEFAULTS, CONTEXT_KEYS
 
+import logging
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="{ctx.pipeline_name} API",
     version="1.0.0",
