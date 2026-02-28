@@ -134,7 +134,8 @@ class TFTWrapper(DLModelWrapperBase):
         Returns:
             float: Training loss for the batch.
         """
-        assert self.model is not None  # <-- fix mypy
+        if self.model is None:
+            raise RuntimeError("Model is not initialized")
 
         self.model.train()
 
@@ -173,8 +174,6 @@ class TFTWrapper(DLModelWrapperBase):
             raise RuntimeError(
                 "Model not built/trained yet — call build() or train_step() first."
             )
-
-        assert self.model is not None  # fix mypy
 
         t = self._ensure_float(x)
         t = self._ensure_seq_dim(t)

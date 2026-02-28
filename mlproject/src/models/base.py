@@ -96,7 +96,8 @@ class DLModelWrapperBase(BaseModelWrapper):
         """Save model weights + metadata with torch.save."""
         self.ensure_built()
         os.makedirs(save_dir, exist_ok=True)
-        assert self.model is not None
+        if self.model is None:
+            raise RuntimeError("Model is None")
 
         state = {
             "model_state": self.model.state_dict(),
@@ -113,9 +114,11 @@ class DLModelWrapperBase(BaseModelWrapper):
 
         state = torch.load(path, map_location="cpu")
         self.model_type = state["model_type"]
-        assert isinstance(self.model_type, str) and len(self.model_type) > 0
+        if not (isinstance(self.model_type, str) and len(self.model_type) > 0):
+            raise ValueError(f"Invalid model_type: {self.model_type}")
         self.build(self.model_type)
-        assert self.model is not None
+        if self.model is None:
+            raise RuntimeError("Model is None after build")
         self.model.load_state_dict(state["model_state"])
         logger.info(f"[Model Loaded] {path}")
         return self

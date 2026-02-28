@@ -91,7 +91,10 @@ class CatBoostWrapper(MLModelWrapper):
         x_arr = np.asarray(x, dtype=np.float32)
 
         shape = x_arr.shape
-        assert len(shape) <= 3
+        if len(shape) > 3:
+            raise ValueError(
+                f"Input shape {shape} has > 3 dimensions, which is not supported."
+            )
 
         # Flatten 3D input (Batch, Time, Feature) -> 2D (Batch, Time*Feature)
         if len(shape) == 3:
