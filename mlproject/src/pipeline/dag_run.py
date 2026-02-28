@@ -313,7 +313,7 @@ def run_serve(
             if step.get("type") == "mlflow_loader":
                 step.alias = alias
 
-    temp_config = ".temp_merged_serve.yaml"
+    temp_config = f".temp_merged_serve_{uuid.uuid4().hex}.yaml"
     ConfigMerger.save(merged_cfg, temp_config)
 
     try:
@@ -378,7 +378,7 @@ def run_tune(
                 logger.info(f"[CONFIG] Override: n_trials={n_trials}")
                 break
 
-    temp_config = ".temp_merged_tune.yaml"
+    temp_config = f".temp_merged_tune_{uuid.uuid4().hex}.yaml"
     ConfigMerger.save(merged_cfg, temp_config)
 
     try:
