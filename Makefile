@@ -18,7 +18,7 @@ venv:
 # Style
 style:
 	black ./${MAIN_FOLDER}/ --line-length 88
-	${PYTHON} -m isort -rc ./${MAIN_FOLDER}/
+	${PYTHON} -m isort ./${MAIN_FOLDER}/
 	${PYTHON} -m  autoflake --in-place --remove-unused-variables --remove-all-unused-imports -r mlproject/
 	${PYTHON} -m  autopep8 --in-place --aggressive --aggressive --aggressive -r mlproject/
 	flake8 ./${MAIN_FOLDER}/ --exclude=*/generated/*

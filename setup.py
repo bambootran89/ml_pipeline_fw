@@ -8,6 +8,8 @@ with open(Path(BASE_DIR, "requirements/prod.txt")) as file:
     required_packages = [ln.strip() for ln in file.readlines()]
 
 style_packages = [
+    "autoflake",
+    "autopep8",
     "black==23.3.0",
     "flake8==6.0.0",
     "mypy==1.8.0",
