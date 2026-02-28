@@ -122,7 +122,7 @@ class TransformManager:
                 "exponential",
                 "udf",
             ]:
-                self.stateless_transform(df_out, step_cfg)
+                df_out = self.stateless_transform(df_out, step_cfg)
 
             else:
                 raise ValueError(f"Unknown transform step: {step_name}")
@@ -160,25 +160,27 @@ class TransformManager:
         """
         step_name = step_cfg.get("name", "")
         if step_name == "clip":
-            self.transform_clip(df, step_cfg)
+            df = self.transform_clip(df, step_cfg)
 
         elif step_name == "log":
-            self.transform_log(df, step_cfg)
+            df = self.transform_log(df, step_cfg)
 
         elif step_name == "abs":
-            self.transform_abs(df, step_cfg)
+            df = self.transform_abs(df, step_cfg)
         elif step_name == "round":
-            self.transform_round(df, step_cfg)
+            df = self.transform_round(df, step_cfg)
         elif step_name == "binary":
-            self.transform_binary(df, step_cfg)
+            df = self.transform_binary(df, step_cfg)
 
         elif step_name == "exponential":
-            self.transform_exponential(df, step_cfg)
+            df = self.transform_exponential(df, step_cfg)
 
         elif step_name == "udf":
-            self.transform_udf(df, step_cfg)
+            df = self.transform_udf(df, step_cfg)
         else:
             raise ValueError(f"Unknown transform step: {step_name}")
+
+        return df
 
     def transform_exponential(
         self,
@@ -206,11 +208,14 @@ class TransformManager:
         if not isinstance(columns, list):
             raise TypeError("exponential transform requires `columns` as a list")
 
+        df_out = df.copy()
         for col in columns:
-            if col not in df.columns:
+            if col not in df_out.columns:
                 raise KeyError(f"Column '{col}' not found for exponential transform")
 
-            df[col] = np.exp(scale * df[col])
+            df_out[col] = np.exp(scale * df_out[col])
+
+        return df_out
 
     def transform_binary(
         self,
@@ -238,11 +243,14 @@ class TransformManager:
         if not isinstance(columns, list):
             raise TypeError("binary transform requires `columns` as a list")
 
+        df_out = df.copy()
         for col in columns:
-            if col not in df.columns:
+            if col not in df_out.columns:
                 raise KeyError(f"Column '{col}' not found for binary transform")
 
-            df[col] = (df[col] > threshold).astype(int)
+            df_out[col] = (df_out[col] > threshold).astype(int)
+
+        return df_out
 
     def transform_abs(
         self,
@@ -268,10 +276,13 @@ class TransformManager:
         if not isinstance(columns, list):
             raise TypeError("abs transform requires `columns` as a list")
 
+        df_out = df.copy()
         for col in columns:
-            if col not in df.columns:
+            if col not in df_out.columns:
                 raise KeyError(f"Column '{col}' not found for abs transform")
-            df[col] = df[col].abs()
+            df_out[col] = df_out[col].abs()
+
+        return df_out
 
     def transform_round(
         self,
@@ -299,10 +310,13 @@ class TransformManager:
         if not isinstance(columns, list):
             raise TypeError("round transform requires `columns` as a list")
 
+        df_out = df.copy()
         for col in columns:
-            if col not in df.columns:
+            if col not in df_out.columns:
                 raise KeyError(f"Column '{col}' not found for round transform")
-            df[col] = df[col].round(decimals)
+            df_out[col] = df_out[col].round(decimals)
+
+        return df_out
 
     def transform_clip(
         self,
@@ -330,15 +344,18 @@ class TransformManager:
         max_val: Optional[float] = step_cfg.get("max")
 
         if min_val is None and max_val is None:
-            return
+            return df
 
+        df_out = df.copy()
         for col in columns:
-            if col not in df.columns:
+            if col not in df_out.columns:
                 continue
-            if not pd.api.types.is_numeric_dtype(df[col]):
+            if not pd.api.types.is_numeric_dtype(df_out[col]):
                 continue
 
-            df[col] = df[col].clip(lower=min_val, upper=max_val)
+            df_out[col] = df_out[col].clip(lower=min_val, upper=max_val)
+
+        return df_out
 
     def transform_log(
         self,
@@ -364,13 +381,14 @@ class TransformManager:
         columns: List[str] = step_cfg.get("columns", [])
         offset: float = float(step_cfg.get("offset", 0.0))
 
+        df_out = df.copy()
         for col in columns:
-            if col not in df.columns:
+            if col not in df_out.columns:
                 continue
-            if not pd.api.types.is_numeric_dtype(df[col]):
+            if not pd.api.types.is_numeric_dtype(df_out[col]):
                 continue
 
-            values = df[col].astype(np.float64)
+            values = df_out[col].astype(np.float64)
 
             if (values + offset <= 0).any():
                 raise ValueError(
@@ -378,7 +396,9 @@ class TransformManager:
                     "non-positive values encountered."
                 )
 
-            df[col] = np.log(values + offset)
+            df_out[col] = np.log(values + offset)
+
+        return df_out
 
     def transform_udf(
         self,
@@ -412,11 +432,14 @@ class TransformManager:
         if func is None or not callable(func):
             raise ValueError("UDF step requires a callable `func`.")
 
+        df_out = df.copy()
         for col in columns:
-            if col not in df.columns:
+            if col not in df_out.columns:
                 continue
 
-            df[col] = df[col].apply(func)
+            df_out[col] = df_out[col].apply(func)
+
+        return df_out
 
     def fit_fillna(
         self,
