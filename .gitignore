@@ -44,6 +44,8 @@ env/
 mlproject_env/
 venv*/
 env*/
+# Allow project config environments directory (not a venv)
+!mlproject/configs/environments/
 
 # IDEs and editors
 .vscode/

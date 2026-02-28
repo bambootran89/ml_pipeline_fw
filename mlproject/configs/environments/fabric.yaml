@@ -1,0 +1,52 @@
+# @package _global_
+#
+# Microsoft Fabric experiment config overlay.
+#
+# Usage — in your Fabric notebook:
+#   from mlproject.src.pipeline.dag_run import run_training
+#   run_training(
+#       experiment_path="mlproject/configs/experiments/tabular.yaml",
+#       pipeline_path="mlproject/configs/pipelines/standard_train.yaml",
+#       # Optionally merge this file on top to override paths:
+#       # config_overrides=["mlproject/configs/environments/fabric.yaml"]
+#   )
+#
+# Or pass as a direct OmegaConf merge target.
+
+# ── MLflow ───────────────────────────────────────────────────────────────
+# On Fabric, leave tracking_uri as "mlflow" to use the built-in server.
+# The experiment will appear automatically in the workspace ML Experiments.
+mlflow:
+  tracking_uri: "mlflow"          # Fabric built-in MLflow (no external server)
+  experiment_name: "ml_pipeline_fabric"
+  run_name_prefix: "fabric"
+  enabled: true
+
+  registry:
+    enabled: true
+    model_name: "fabric_model"
+
+  artifacts:
+    log_model: true
+    log_scaler: true
+    log_config: true
+    log_metrics: true
+    log_plots: false              # Disable heavy plotting artifacts on Fabric
+
+  autolog:
+    enabled: true
+    log_models: false             # We log manually via ArtifactPyFuncWrapper
+
+# ── Paths ─────────────────────────────────────────────────────────────────
+# OneLake mount point inside a Fabric notebook: /lakehouse/default/Files/
+# Adjust the sub-folder names to match your Lakehouse layout.
+training:
+  artifacts_dir: /lakehouse/default/Files/models
+
+preprocessing:
+  artifacts_dir: /lakehouse/default/Files/preprocessors
+
+# ── Tuning ────────────────────────────────────────────────────────────────
+# Replace local SQLite with an in-memory Optuna storage for Fabric.
+tuning:
+  storage: null                   # null => Optuna uses in-memory storage

@@ -1,0 +1,12 @@
+# Requirements for running in Microsoft Fabric
+# Fabric already includes: torch, pandas, numpy, scikit-learn, pyarrow, mlflow
+# Only install the following packages in the first notebook cell:
+# %pip install -r /lakehouse/default/Files/requirements_fabric.txt
+
+xgboost
+catboost
+omegaconf
+optuna>=3.0.0
+optuna-integration[mlflow]>=3.0.0
+joblib
+feast
