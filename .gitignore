@@ -106,6 +106,7 @@ tmp/
 .tmp/
 temp/
 .temp/
+*.joblib
 
 # Ignore all directories named 'generated'
 generated/
@@ -120,3 +121,4 @@ generated/
 
 # Ignore feature_repo* directories (e.g. feature_repo_etth1)
 feature_repo*/
+*.joblib
