@@ -129,7 +129,7 @@ def test_stateless_clip(cfg: Any, sample_df: pd.DataFrame) -> None:
     """Test stateless clip transform."""
     manager = TransformManager(cfg, artifacts_dir=cfg.preprocessing.artifacts_dir)
     df = sample_df.copy()
-    manager.stateless_transform(
+    df = manager.stateless_transform(
         df, {"name": "clip", "columns": ["num"], "min": 1.5, "max": 3.0}
     )
     assert df["num"].max() <= 3.0
@@ -140,7 +140,7 @@ def test_stateless_log(cfg: Any, sample_df: pd.DataFrame) -> None:
     """Test stateless log transform."""
     manager = TransformManager(cfg, artifacts_dir=cfg.preprocessing.artifacts_dir)
     df = sample_df.copy()
-    manager.stateless_transform(df, {"name": "log", "columns": ["num"]})
+    df = manager.stateless_transform(df, {"name": "log", "columns": ["num"]})
     assert np.allclose(
         df["num"].dropna().values, np.log(sample_df["num"].dropna().values)
     )
@@ -150,7 +150,7 @@ def test_stateless_abs(cfg: Any) -> None:
     """Test stateless abs transform."""
     manager = TransformManager(cfg, artifacts_dir=cfg.preprocessing.artifacts_dir)
     df = pd.DataFrame({"num": [-1.0, -2.0, 3.0]})
-    manager.stateless_transform(df, {"name": "abs", "columns": ["num"]})
+    df = manager.stateless_transform(df, {"name": "abs", "columns": ["num"]})
     assert np.all(df["num"].values >= 0)
     assert np.allclose(df["num"].values, [1.0, 2.0, 3.0])
 
@@ -159,7 +159,7 @@ def test_stateless_round(cfg: Any) -> None:
     """Test stateless round transform."""
     manager = TransformManager(cfg, artifacts_dir=cfg.preprocessing.artifacts_dir)
     df = pd.DataFrame({"num": [1.111, 2.222, 3.555]})
-    manager.stateless_transform(
+    df = manager.stateless_transform(
         df, {"name": "round", "columns": ["num"], "decimals": 2}
     )
     assert np.allclose(df["num"].values, [1.11, 2.22, 3.56])
@@ -169,7 +169,7 @@ def test_stateless_binary(cfg: Any) -> None:
     """Test stateless binary transform."""
     manager = TransformManager(cfg, artifacts_dir=cfg.preprocessing.artifacts_dir)
     df = pd.DataFrame({"num": [0.5, 1.5, 2.5]})
-    manager.stateless_transform(
+    df = manager.stateless_transform(
         df, {"name": "binary", "columns": ["num"], "threshold": 1.0}
     )
     assert set(df["num"].values) == {0, 1}
@@ -180,7 +180,7 @@ def test_stateless_exponential(cfg: Any) -> None:
     """Test stateless exponential transform."""
     manager = TransformManager(cfg, artifacts_dir=cfg.preprocessing.artifacts_dir)
     df = pd.DataFrame({"num": [1.0, 2.0]})
-    manager.stateless_transform(
+    df = manager.stateless_transform(
         df, {"name": "exponential", "columns": ["num"], "scale": 2.0}
     )
     assert np.allclose(df["num"].values, np.exp(2.0 * np.array([1.0, 2.0])))
@@ -190,7 +190,7 @@ def test_stateless_udf(cfg: Any) -> None:
     """Test stateless udf transform."""
     manager = TransformManager(cfg, artifacts_dir=cfg.preprocessing.artifacts_dir)
     df = pd.DataFrame({"num": [1.0, 2.0]})
-    manager.stateless_transform(
+    df = manager.stateless_transform(
         df, {"name": "udf", "columns": ["num"], "func": lambda x: x * 10}
     )
     assert np.allclose(df["num"].values, [10.0, 20.0])
