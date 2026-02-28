@@ -114,7 +114,7 @@ class TrainingPipeline(BasePipeline):
                     TransformManager
                 ] = self.preprocessor.transform_manager
 
-                # Log Preprocessor (với interface thống nhất)
+                # Log Preprocessor (with unified interface)
                 self.mlflow_manager.log_component(
                     obj=transform_manager,
                     name=f"{self.experiment_name}_preprocessor",

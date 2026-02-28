@@ -149,11 +149,11 @@ class MLModelWrapper(BaseModelWrapper):
 
     def fit(
         self,
-        x,
-        y,
+        x: np.ndarray,
+        y: np.ndarray,
         sample_weight: Optional[np.ndarray] = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Train model with sklearn-style estimator."""
         if self.model is None:
             self.build(model_type=self.model_type)

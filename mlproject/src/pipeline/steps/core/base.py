@@ -4,8 +4,8 @@ Base interface for pipeline steps with integrated data wiring.
 Defines the contract for all pipeline execution steps including
 data loading, preprocessing, training, and evaluation.
 
-Data Wiring cho phép flexible input/output key mapping giữa các steps
-thông qua YAML configuration mà không cần thay đổi step code.
+Data Wiring allows flexible input/output key mapping between steps
+through YAML configuration without changing step code.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ class BasePipelineStep(ABC):
 
     Data Wiring
     -----------
-    Steps có thể configure custom input/output key mappings qua YAML:
+    Steps can configure custom input/output key mappings via YAML:
 
         - id: "train_model"
           type: "trainer"
@@ -286,10 +286,10 @@ class BasePipelineStep(ABC):
             return data.get(key)
 
         parts = key.split(".")
-        current: Union[Dict[str, Any], Any, None] = data  # annotate rộng hơn
+        current: Union[Dict[str, Any], Any, None] = data  # broader annotation
 
         for part in parts:
-            if not isinstance(current, dict):  # thu hẹp kiểu
+            if not isinstance(current, dict):  # narrow down type
                 return None
             current = current.get(part)
             if current is None:

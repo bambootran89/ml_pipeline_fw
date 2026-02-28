@@ -56,10 +56,10 @@ class KMeansWrapper(MLModelWrapper):
 
     def fit(
         self,
-        x,
-        y,
+        x: np.ndarray,
+        y: Optional[np.ndarray] = None,
         sample_weight: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:
         """
         Fit the KMeans model on input data.

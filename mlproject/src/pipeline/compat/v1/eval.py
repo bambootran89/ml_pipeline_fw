@@ -46,7 +46,7 @@ class EvalPipeline(BasePipeline):
         self.evaluator: BaseEvaluator = self._build_evaluator()
 
         if self.mlflow_manager.enabled:
-            # Load artifacts đồng nhất
+            # Load unified artifacts
             self.preprocessor_model = self.mlflow_manager.load_component(
                 name=f"{self.experiment_name}_preprocessor", alias=alias
             )

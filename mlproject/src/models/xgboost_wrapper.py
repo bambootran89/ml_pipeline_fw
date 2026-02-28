@@ -25,21 +25,21 @@ class XGBWrapper(MLModelWrapper):
 
     def fit(
         self,
-        x,
-        y,
+        x: np.ndarray,
+        y: np.ndarray,
         sample_weight: Optional[np.ndarray] = None,
         x_val: Optional[np.ndarray] = None,
         y_val: Optional[np.ndarray] = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Train model with sklearn-style estimator."""
         if self.model is None:
-            self.build(model_type="")  # Dùng giá trị int đã tính toán
+            self.build(model_type="")  # Uses precalculated value
 
         self.ensure_built()
         x_reshaped = flatten_timeseries(x)
         y_reshaped = flatten_timeseries(y)
-        # Tạo eval_set nếu có validation data
+        # Create eval_set if validation data is provided
         fit_params = kwargs.copy()
         if x_val is not None and y_val is not None:
             x_val_reshaped = flatten_timeseries(x_val)

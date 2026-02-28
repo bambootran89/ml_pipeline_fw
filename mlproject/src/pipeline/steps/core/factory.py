@@ -4,9 +4,9 @@ This module provides a factory pattern for creating pipeline steps.
 Step classes are registered via register() method to avoid circular imports.
 
 Import Order Solution:
-1. factory.py defines StepFactory với empty registry
-2. Các step files import factory và tự register
-3. __init__.py import tất cả steps → triggers registration
+1. factory.py defines StepFactory with empty registry
+2. Step files import factory and auto-register
+3. __init__.py imports all steps -> triggers registration
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ class StepFactory:
     - parallel: Execute branches concurrently
     - branch: Conditional execution
     - sub_pipeline: Nested pipeline
-    - clustering: Clustering với auto output_as_feature
+    - clustering: Clustering with auto output_as_feature
     """
 
     # Registry - populated by step classes calling register()
