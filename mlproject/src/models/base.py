@@ -188,12 +188,12 @@ class MLModelWrapper(BaseModelWrapper):
             "cfg": OmegaConf.to_container(self.cfg, resolve=True),
         }
 
-        joblib.dump(state, os.path.join(save_dir, "model.pkl"))
-        logger.info(f"[ML Model Saved] {os.path.join(save_dir, 'model.pkl')}")
+        joblib.dump(state, os.path.join(save_dir, "model.joblib"))
+        logger.info(f"[ML Model Saved] {os.path.join(save_dir, 'model.joblib')}")
 
     def load(self, save_dir: str):
         """Load estimator + metadata via joblib."""
-        path = os.path.join(save_dir, "model.pkl")
+        path = os.path.join(save_dir, "model.joblib")
         if not os.path.exists(path):
             raise RuntimeError(f"Model file not found: {path}")
 

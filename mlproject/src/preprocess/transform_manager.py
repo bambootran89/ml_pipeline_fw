@@ -14,11 +14,12 @@ reproducibility across training and inference.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-import pickle
 from typing import Any, Dict, List, Optional, TypedDict, Union, cast
 
+import joblib
 import numpy as np
 import pandas as pd
 from omegaconf import DictConfig, ListConfig, OmegaConf
@@ -708,20 +709,23 @@ class TransformManager:
         """
         os.makedirs(self.artifacts_dir, exist_ok=True)
 
-        with open(os.path.join(self.artifacts_dir, "fillna_stats.pkl"), "wb") as f:
-            pickle.dump(self.fillna_stats, f)
+        with open(
+            os.path.join(self.artifacts_dir, "fillna_stats.json"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(self.fillna_stats, f, indent=2)
 
-        with open(os.path.join(self.artifacts_dir, "label_encoders.pkl"), "wb") as f:
-            pickle.dump(self.label_encoders, f)
+        joblib.dump(
+            self.label_encoders,
+            os.path.join(self.artifacts_dir, "label_encoders.joblib"),
+        )
 
-        with open(os.path.join(self.artifacts_dir, "scaler.pkl"), "wb") as f:
-            pickle.dump(
-                {
-                    "scaler": self.scaler,
-                    "columns": self.scaler_columns,
-                },
-                f,
-            )
+        joblib.dump(
+            {
+                "scaler": self.scaler,
+                "columns": self.scaler_columns,
+            },
+            os.path.join(self.artifacts_dir, "scaler.joblib"),
+        )
 
     def normalize_preprocessing_steps(
         self,
@@ -779,25 +783,25 @@ class TransformManager:
             return
 
         self.steps = self.normalize_preprocessing_steps(cfg)
-        path = os.path.join(self.artifacts_dir, "fillna_stats.pkl")
-        logger.info(f"Loading artifacts {path}")
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                self.fillna_stats = pickle.load(f)
 
-        path = os.path.join(self.artifacts_dir, "label_encoders.pkl")
+        path = os.path.join(self.artifacts_dir, "fillna_stats.json")
         logger.info(f"Loading artifacts {path}")
         if os.path.exists(path):
-            with open(path, "rb") as f:
-                self.label_encoders = pickle.load(f)
+            with open(path, "r", encoding="utf-8") as f:
+                self.fillna_stats = json.load(f)
 
-        path = os.path.join(self.artifacts_dir, "scaler.pkl")
+        path = os.path.join(self.artifacts_dir, "label_encoders.joblib")
         logger.info(f"Loading artifacts {path}")
         if os.path.exists(path):
-            with open(path, "rb") as f:
-                obj = pickle.load(f)
-                self.scaler = obj["scaler"]
-                self.scaler_columns = obj["columns"]
+            self.label_encoders = joblib.load(path)
+
+        path = os.path.join(self.artifacts_dir, "scaler.joblib")
+        logger.info(f"Loading artifacts {path}")
+        if os.path.exists(path):
+            obj = joblib.load(path)
+            self.scaler = obj["scaler"]
+            self.scaler_columns = obj["columns"]
+
         self.is_load = True
 
     def get_params(self) -> Dict[str, Any]:
