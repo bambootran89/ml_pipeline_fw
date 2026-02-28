@@ -126,7 +126,8 @@ class OptunaTuner(BaseTuner):
         self.cv_pipeline.cfg = trial_cfg
 
         run_name = f"Trial_{trial.number:03d}"
-        assert self.mlflow_manager is not None
+        if self.mlflow_manager is None:
+            raise RuntimeError("self.mlflow_manager is None")
         with self.mlflow_manager.start_run(run_name=run_name, nested=True):
             # Log parameters
 

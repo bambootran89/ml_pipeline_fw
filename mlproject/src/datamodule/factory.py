@@ -74,7 +74,8 @@ class DataModuleFactory(DynamicFactoryBase):
             cfg_init = cfg
         else:
             raw_cfg = OmegaConf.to_container(cfg, resolve=True)
-            assert isinstance(raw_cfg, dict)
+            if not isinstance(raw_cfg, dict):
+                raise TypeError(f"Expected raw_cfg to be dict, got {type(raw_cfg)}")
             cfg_init = cast(Dict[str, Any], raw_cfg)
 
         return data_module_class(

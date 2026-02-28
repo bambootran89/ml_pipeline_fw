@@ -270,7 +270,8 @@ class PreprocessingService:
 
         # Transform
         loop = asyncio.get_running_loop()
-        assert self.preprocessor is not None
+        if self.preprocessor is None:
+            raise RuntimeError("self.preprocessor is None")
         return await loop.run_in_executor(None, self.preprocessor.transform, df)
 
 

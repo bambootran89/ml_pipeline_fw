@@ -171,7 +171,8 @@ class DynamicAdapterStep(BasePipelineStep):
         Raises:
             AssertionError: If `class_path` is not provided.
         """
-        assert self.class_path is not None
+        if self.class_path is None:
+            raise RuntimeError("self.class_path is None")
 
         module_path, class_name = self.class_path.rsplit(".", 1)
         module = importlib.import_module(module_path)

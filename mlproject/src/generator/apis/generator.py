@@ -145,7 +145,8 @@ class ApiGeneratorMixin(ApiGeneratorFastAPIMixin, ApiGeneratorRayServeMixin):
     def _load_serve_config(self, serve_config_path: str) -> tuple[DictConfig, str, Any]:
         """Load and validate serve configuration."""
         cfg = OmegaConf.load(serve_config_path)
-        assert isinstance(cfg, DictConfig)
+        if not isinstance(cfg, DictConfig):
+            raise TypeError(f"Expected cfg to be DictConfig, got {type(cfg)}")
         return cfg, cfg.pipeline.name, cfg.pipeline.steps
 
     def _prepare_data_config(
@@ -158,7 +159,10 @@ class ApiGeneratorMixin(ApiGeneratorFastAPIMixin, ApiGeneratorRayServeMixin):
         # Extract data config from experiment config (preferred) or serve config
         if experiment_config_path and Path(experiment_config_path).exists():
             exp_cfg = OmegaConf.load(experiment_config_path)
-            assert isinstance(exp_cfg, DictConfig)
+            if not isinstance(exp_cfg, DictConfig):
+                raise TypeError(
+                    f"Expected exp_cfg to be DictConfig, got {type(exp_cfg)}"
+                )
             data_config = self._extract_data_config(exp_cfg)
         else:
             data_config = self._extract_data_config(cfg)

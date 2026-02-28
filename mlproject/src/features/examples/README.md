@@ -22,7 +22,7 @@ The Feature Store framework is applied across four widely-used machine learning 
 
 All examples follow the **Modern MLOps — Separation of Concerns** principle:
 
-### 📌 Component Responsibilities
+### Component Responsibilities
 
 | Layer | Directory / File Location | Responsibility |
 |---|---|---|

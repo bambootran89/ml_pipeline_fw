@@ -13,7 +13,8 @@ class FoldEvaluator:
     """
 
     def __init__(self, cfg):
-        assert cfg is not None
+        if cfg is None:
+            raise RuntimeError("cfg is None")
         eval_type = cfg.get("evaluation", {}).get("type", "regression")
         if eval_type == "classification":
             self.evaluator = ClassificationEvaluator()

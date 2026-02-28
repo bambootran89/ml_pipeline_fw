@@ -178,8 +178,10 @@ class BaseDataModule:
             r_train = split_cfg.get("train", 0.7)
             r_test = split_cfg.get("test", 0.2)
             r_val = split_cfg.get("val", 0.1)
-            assert r_test > 0
-            assert (r_test + r_train + r_val) <= 1
+            if r_test <= 0:
+                raise ValueError("r_test must be > 0")
+            if r_test + r_train + r_val > 1:
+                raise ValueError("r_test + r_train + r_val must be <= 1")
             n = len(x)
             n_train = int(n * r_train)
             n_val = int(n * split_cfg["val"])
@@ -289,12 +291,30 @@ class BaseDataModule:
         Raises:
             AssertionError: If arrays are missing.
         """
-        assert isinstance(self.x_train, np.ndarray)
-        assert isinstance(self.y_train, np.ndarray)
-        assert isinstance(self.x_val, np.ndarray)
-        assert isinstance(self.y_val, np.ndarray)
-        assert isinstance(self.x_test, np.ndarray)
-        assert isinstance(self.y_test, np.ndarray)
+        if not isinstance(self.x_train, np.ndarray):
+            raise TypeError(
+                f"Expected self.x_train to be np.ndarray, got {type(self.x_train)}"
+            )
+        if not isinstance(self.y_train, np.ndarray):
+            raise TypeError(
+                f"Expected self.y_train to be np.ndarray, got {type(self.y_train)}"
+            )
+        if not isinstance(self.x_val, np.ndarray):
+            raise TypeError(
+                f"Expected self.x_val to be np.ndarray, got {type(self.x_val)}"
+            )
+        if not isinstance(self.y_val, np.ndarray):
+            raise TypeError(
+                f"Expected self.y_val to be np.ndarray, got {type(self.y_val)}"
+            )
+        if not isinstance(self.x_test, np.ndarray):
+            raise TypeError(
+                f"Expected self.x_test to be np.ndarray, got {type(self.x_test)}"
+            )
+        if not isinstance(self.y_test, np.ndarray):
+            raise TypeError(
+                f"Expected self.y_test to be np.ndarray, got {type(self.y_test)}"
+            )
 
         return (
             self.x_train,
@@ -340,8 +360,17 @@ class BaseDataModule:
         Raises:
             AssertionError: If internal arrays are missing.
         """
-        assert isinstance(self.x_train, np.ndarray)
-        assert isinstance(self.x_val, np.ndarray)
-        assert isinstance(self.x_test, np.ndarray)
+        if not isinstance(self.x_train, np.ndarray):
+            raise TypeError(
+                f"Expected self.x_train to be np.ndarray, got {type(self.x_train)}"
+            )
+        if not isinstance(self.x_val, np.ndarray):
+            raise TypeError(
+                f"Expected self.x_val to be np.ndarray, got {type(self.x_val)}"
+            )
+        if not isinstance(self.x_test, np.ndarray):
+            raise TypeError(
+                f"Expected self.x_test to be np.ndarray, got {type(self.x_test)}"
+            )
 
         return len(self.x_train), len(self.x_val), len(self.x_test)

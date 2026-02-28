@@ -40,7 +40,8 @@ def add_lag_features(
 
         for lag in lags:
             df_out[f"{col}_lag{lag}"] = df_out[col].shift(lag)
-    assert len(df) == len(df_out)
+    if len(df) != len(df_out):
+        raise ValueError("Length mismatch in transformer")
     return df_out
 
 
@@ -81,7 +82,8 @@ def add_rolling_features(
 
         for window in windows:
             df_out[f"{col}_roll{window}_{agg}"] = df_out[col].rolling(window).agg(agg)
-    assert len(df) == len(df_out)
+    if len(df) != len(df_out):
+        raise ValueError("Length mismatch in transformer")
     return df_out
 
 
@@ -115,5 +117,6 @@ def add_time_features(df: pd.DataFrame, timestamp_col: str) -> pd.DataFrame:
     # Day of week (7-day cycle)
     df_out["dow_sin"] = np.sin(2 * np.pi * ts.dt.dayofweek / 7)
     df_out["dow_cos"] = np.cos(2 * np.pi * ts.dt.dayofweek / 7)
-    assert len(df) == len(df_out)
+    if len(df) != len(df_out):
+        raise ValueError("Length mismatch in transformer")
     return df_out

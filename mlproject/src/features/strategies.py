@@ -293,7 +293,8 @@ class OnlineRetrievalStrategy(FeatureRetrievalStrategy):
         )
 
         # Retrieve sequence at time_point
-        assert self.time_point is not None
+        if self.time_point is None:
+            raise RuntimeError("self.time_point is None")
         df = ts_store.get_latest_n_sequence(
             features=features,
             n_points=win_size + (24 // frequency_hours),

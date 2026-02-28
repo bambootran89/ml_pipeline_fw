@@ -63,8 +63,8 @@ Virtual Environment (recommended)
 
 ```bash
 # Clone the repository
-git clone https://github.com/bambootran89/ml_pipeline_template.git
-cd ml_pipeline_template
+git clone https://github.com/bambootran89/ml_pipeline_fw.git
+cd ml_pipeline_fw
 
 # 1. Create virtual environment using Python 3.10
 python3.10 -m venv py3.10

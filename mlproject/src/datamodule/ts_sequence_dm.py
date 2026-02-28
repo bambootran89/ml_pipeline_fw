@@ -37,8 +37,14 @@ class TSDLDataModule(BaseDataModule):
 
         Reads batch_size and num_workers from config.
         """
-        assert isinstance(self.x_train, np.ndarray)
-        assert isinstance(self.y_train, np.ndarray)
+        if not isinstance(self.x_train, np.ndarray):
+            raise TypeError(
+                f"Expected self.x_train to be np.ndarray, got {type(self.x_train)}"
+            )
+        if not isinstance(self.y_train, np.ndarray):
+            raise TypeError(
+                f"Expected self.y_train to be np.ndarray, got {type(self.y_train)}"
+            )
 
         if isinstance(self.cfg, dict):
             batch_size = (
@@ -62,8 +68,14 @@ class TSDLDataModule(BaseDataModule):
             num_workers=num_workers,
         )
 
-        assert isinstance(self.x_val, np.ndarray)
-        assert isinstance(self.y_val, np.ndarray)
+        if not isinstance(self.x_val, np.ndarray):
+            raise TypeError(
+                f"Expected self.x_val to be np.ndarray, got {type(self.x_val)}"
+            )
+        if not isinstance(self.y_val, np.ndarray):
+            raise TypeError(
+                f"Expected self.y_val to be np.ndarray, got {type(self.y_val)}"
+            )
 
         self.val_loader = DataLoader(
             NumpyWindowDataset(self.x_val, self.y_val),
@@ -83,8 +95,10 @@ class TSDLDataModule(BaseDataModule):
             tuple:
                 (train_loader, val_loader, input_chunk, output_chunk)
         """
-        assert self.train_loader is not None
-        assert self.val_loader is not None
+        if self.train_loader is None:
+            raise RuntimeError("self.train_loader is None")
+        if self.val_loader is None:
+            raise RuntimeError("self.val_loader is None")
 
         return (
             self.train_loader,

@@ -166,7 +166,11 @@ class FrameworkModelStep(BasePipelineStep):
         FileNotFoundError
             If experiment_config file not found.
         """
-        assert isinstance(self.experiment_config_path, str)
+        if not isinstance(self.experiment_config_path, str):
+            exp_type = type(self.experiment_config_path)
+            raise TypeError(
+                f"Expected experiment_config_path to be str, got {exp_type}"
+            )
 
         logger.info(
             f"[{self.step_id}] Loading experiment config: {self.experiment_config_path}"
