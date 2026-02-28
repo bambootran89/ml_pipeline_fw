@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 # from mlproject.src.generator.orchestrator import ConfigGenerator
 
+# Suppress OpenMP conflicting dynamic runtime libraries error
 os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 os.environ["OMP_NUM_THREADS"] = "1"
 
@@ -239,14 +240,6 @@ def _preview_predictions(
     # Prediction preview
     try:
         data = np.asarray(predictions)
-
-        # Simple preview: show count and first/last few samples
-        logger.info(f"[RUN] Total predictions: {len(data)} [Key: {main_key}]")
-        if len(pred_keys) > 1:
-            logger.info(f"[RUN] Other available predictions: {pred_keys[1:]}")
-
-        if hasattr(predictions, "shape"):
-            logger.info(f"[RUN] Prediction shape: {predictions.shape}")
 
         preview_len = min(5, len(data))
         if preview_len > 0:

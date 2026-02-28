@@ -110,6 +110,7 @@ import os
 import platform
 
 if platform.system() == "Darwin":
+    # Suppress OpenMP conflicting dynamic runtime libraries error
     os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
     os.environ["OMP_NUM_THREADS"] = "1"
 

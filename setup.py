@@ -29,7 +29,7 @@ with open("LICENSE") as f:
 setup(
     name="mlproject",
     version="1.0",
-    description="mlproject does something",
+    description="Enterprise MLOps framework for end-to-end model lifecycles",
     long_description=readme,
     author="Tran Huu Cuong",
     author_email="bambootran89@gmail.com",

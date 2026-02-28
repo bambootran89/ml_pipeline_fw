@@ -34,6 +34,7 @@ from mlproject.src.generator.api_generator import ApiGenerator
 logger = logging.getLogger(__name__)
 
 
+# Suppress OpenMP conflicting dynamic runtime libraries error
 os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 os.environ["OMP_NUM_THREADS"] = "1"
 

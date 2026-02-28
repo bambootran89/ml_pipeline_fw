@@ -107,6 +107,7 @@ from ray.serve.handle import DeploymentHandle
 import platform
 # Fix for potential OpenMP conflict on macOS
 if platform.system() == "Darwin":
+    # Suppress OpenMP conflicting dynamic runtime libraries error
     os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
     os.environ["OMP_NUM_THREADS"] = "1"
 
